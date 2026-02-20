@@ -6,7 +6,7 @@
  * via the before_agent_start hook.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -248,7 +248,7 @@ export default {
       const messages = extractMessages(event.messages, LOOKBACK);
       // Append current prompt if not already present
       if (event.prompt?.trim() && !messages.some((m) => m.text === event.prompt.trim())) {
-        messages.push({ type: "user", text: event.prompt.trim().slice(0, 2000) });
+        messages.push({ type: "user", text: event.prompt.trim() });
       }
 
       // Route
@@ -284,5 +284,17 @@ export default {
 
       return { prependContext: parts.join("\n\n") };
     });
+
+    // Clear session state on session start and end so each session gets a
+    // fresh injection history. Mirrors reflex-session-cleanup.py in Claude Code.
+    const clearState = (ctx) => {
+      const workspaceDir = ctx.workspaceDir;
+      if (!workspaceDir) return;
+      const stateDir = path.join(workspaceDir, ".reflex", ".state");
+      try { rmSync(stateDir, { recursive: true, force: true }); } catch {}
+    };
+
+    api.on("session_start", (event, ctx) => clearState(ctx));
+    api.on("session_end", (event, ctx) => clearState(ctx));
   },
 };
