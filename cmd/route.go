@@ -49,8 +49,8 @@ func runRoute(args []string) error {
 	cwd, _ := os.Getwd()
 	internal.AppendLog(internal.LogEntry{
 		CWD:       cwd,
-		Messages:  len(input.Messages),
-		Registry:  len(input.Registry),
+		Messages:  input.Messages,
+		Registry:  input.Registry,
 		Result:    result,
 		LatencyMS: latency,
 		Model:     cfg.Provider.Model,

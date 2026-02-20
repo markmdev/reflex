@@ -8,14 +8,14 @@ import (
 )
 
 type LogEntry struct {
-	Timestamp  string      `json:"ts"`
-	CWD        string      `json:"cwd"`
-	Messages   int         `json:"messages"`
-	Registry   int         `json:"registry"`
-	Result     *RouteResult `json:"result"`
-	LatencyMS  int64       `json:"latency_ms"`
-	Model      string      `json:"model"`
-	Error      string      `json:"error,omitempty"`
+	Timestamp string        `json:"ts"`
+	CWD       string        `json:"cwd"`
+	Messages  []Message     `json:"messages"`
+	Registry  []RegistryItem `json:"registry"`
+	Result    *RouteResult  `json:"result"`
+	LatencyMS int64         `json:"latency_ms"`
+	Model     string        `json:"model"`
+	Error     string        `json:"error,omitempty"`
 }
 
 // LogPath returns ~/.config/reflex/log.jsonl.

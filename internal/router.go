@@ -41,7 +41,6 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, error) {
 			openai.UserMessage(prompt),
 		},
 		MaxTokens: openai.Int(int64(cfg.Provider.MaxTokens)),
-		Temperature: openai.Float(0.0),
 	})
 	if err != nil {
 		return empty, fmt.Errorf("LLM error: %w", err)

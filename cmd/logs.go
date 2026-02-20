@@ -53,8 +53,8 @@ func runLogs(args []string) error {
 		return nil
 	}
 
-	fmt.Printf("%-19s  %-20s  %-30s  %s\n", "TIME", "PROJECT", "RESULT", "LATENCY")
-	fmt.Println(strings.Repeat("─", 80))
+	fmt.Printf("%-19s  %-20s  %-30s  %-8s  %s\n", "TIME", "PROJECT", "RESULT", "LATENCY", "MSG/REG")
+	fmt.Println(strings.Repeat("─", 88))
 
 	for _, line := range lines {
 		var e internal.LogEntry
@@ -88,7 +88,8 @@ func runLogs(args []string) error {
 			}
 		}
 
-		fmt.Printf("%-19s  %-20s  %-30s  %dms\n", local, project, result, e.LatencyMS)
+		fmt.Printf("%-19s  %-20s  %-30s  %dms  (%dm/%dr)\n",
+			local, project, result, e.LatencyMS, len(e.Messages), len(e.Registry))
 	}
 
 	fmt.Printf("\nLog file: %s\n", p)

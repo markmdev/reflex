@@ -23,7 +23,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Provider: ProviderConfig{
 			BaseURL:   "https://api.moonshot.ai/v1",
-			Model:     "kimi-k2.5-preview",
+			Model:     "kimi-k2.5",
 			MaxTokens: 256,
 		},
 	}
