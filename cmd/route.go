@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/markmdev/reflex/internal"
 )
@@ -21,7 +22,6 @@ func runRoute(args []string) error {
 	cfg, err := internal.LoadConfig(configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[reflex] config error: %v\n", err)
-		// Continue with defaults
 		cfg = internal.DefaultConfig()
 	}
 
@@ -34,12 +34,28 @@ func runRoute(args []string) error {
 	}
 
 	// Route
-	result, err := internal.Route(input, cfg)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[reflex] routing error: %v\n", err)
-		printEmpty()
-		return nil
+	start := time.Now()
+	result, routeErr := internal.Route(input, cfg)
+	latency := time.Since(start).Milliseconds()
+
+	errStr := ""
+	if routeErr != nil {
+		fmt.Fprintf(os.Stderr, "[reflex] routing error: %v\n", routeErr)
+		errStr = routeErr.Error()
+		result = &internal.RouteResult{Docs: []string{}, Skills: []string{}}
 	}
+
+	// Log
+	cwd, _ := os.Getwd()
+	internal.AppendLog(internal.LogEntry{
+		CWD:       cwd,
+		Messages:  len(input.Messages),
+		Registry:  len(input.Registry),
+		Result:    result,
+		LatencyMS: latency,
+		Model:     cfg.Provider.Model,
+		Error:     errStr,
+	})
 
 	// Output
 	out, _ := json.Marshal(result)

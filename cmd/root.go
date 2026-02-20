@@ -9,9 +9,13 @@ const usage = `Usage: reflex <command>
 
 Commands:
   route              Route a conversation to relevant docs and skills
+  logs               Show recent routing decisions
   config show        Show current configuration
   config set <k> <v> Set a config value (api-key, model, base-url, max-tokens)
   config reset       Reset global config to defaults
+
+Flags:
+  logs --last N      Show last N entries (default: 20)
 `
 
 func Execute() error {
@@ -26,6 +30,8 @@ func Execute() error {
 		return runRoute(args[1:])
 	case "config":
 		return runConfig(args[1:])
+	case "logs":
+		return runLogs(args[1:])
 	default:
 		return fmt.Errorf("unknown command: %s\n\n%s", args[0], usage)
 	}
