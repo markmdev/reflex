@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.1] - 2026-02-20
+
+### Added
+- **OpenClaw plugin** (`hooks/openclaw/`): Uses the `before_agent_start` plugin hook to inject context via `prependContext`, which prepends to the user's prompt string. The agent sees the injection as part of the current message rather than buried in the system prompt. Discovers skills from both `.openclaw/skills/` and `.claude/skills/` for cross-tool compatibility. Reads conversation history directly from `event.messages` — no session file parsing needed.
+
+### Fixed
+- **Binary discovery** (`hooks/claude-code/reflex-hook.py`): Subprocess hooks don't inherit the interactive shell's PATH, so `go install` binaries in `~/go/bin/` were invisible. Now checks `REFLEX_BIN` env var, then `shutil.which()`, then common install paths (`~/go/bin`, `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`).
+- **Injection wording**: Replaced `[Reflex]`-prefixed tags with a direct imperative instruction. Docs get a bulleted list under "read these files now"; skills get a plain "use this skill" instruction.
+- **CLI example in README**: Updated registry format from old flat `[]RegistryItem` array to current grouped `{docs, skills}` object.
+
 ## [0.1.0] - 2026-02-19
 
 ### Added
