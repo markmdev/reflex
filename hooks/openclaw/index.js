@@ -6,7 +6,7 @@
  * via the before_agent_start hook.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -207,20 +207,17 @@ function callReflex(payload) {
 }
 
 
-// --- Session state ---
+// --- Session state (in-memory) ---
+// Keyed by sessionKey. Lives in the gateway process — no files, no cleanup needed.
 
-function loadSessionState(workspaceDir, sessionKey) {
-  const stateFile = path.join(workspaceDir, ".reflex", ".state", `${sessionKey}.json`);
-  try { return JSON.parse(readFileSync(stateFile, "utf-8")); }
-  catch { return { docs_read: [], skills_used: [] }; }
+const sessionStateMap = new Map();
+
+function loadSessionState(sessionKey) {
+  return sessionStateMap.get(sessionKey) ?? { docs_read: [], skills_used: [] };
 }
 
-function saveSessionState(workspaceDir, sessionKey, state) {
-  const stateDir = path.join(workspaceDir, ".reflex", ".state");
-  try {
-    mkdirSync(stateDir, { recursive: true });
-    writeFileSync(path.join(stateDir, `${sessionKey}.json`), JSON.stringify(state));
-  } catch {}
+function saveSessionState(sessionKey, state) {
+  sessionStateMap.set(sessionKey, state);
 }
 
 
@@ -252,7 +249,7 @@ export default {
       }
 
       // Route
-      const sessionState = loadSessionState(workspaceDir, sessionKey);
+      const sessionState = loadSessionState(sessionKey);
       const result = callReflex({
         messages,
         registry: { docs, skills },
@@ -267,7 +264,7 @@ export default {
       // Persist injected items to avoid repeating across turns
       sessionState.docs_read = [...new Set([...sessionState.docs_read, ...newDocs])];
       sessionState.skills_used = [...new Set([...sessionState.skills_used, ...newSkills])];
-      saveSessionState(workspaceDir, sessionKey, sessionState);
+      saveSessionState(sessionKey, sessionState);
 
       // Build injection — returned as prependContext, prepended to the user's prompt
       const parts = [];
@@ -284,17 +281,5 @@ export default {
 
       return { prependContext: parts.join("\n\n") };
     });
-
-    // Clear session state on session start and end so each session gets a
-    // fresh injection history. Mirrors reflex-session-cleanup.py in Claude Code.
-    const clearState = (ctx) => {
-      const workspaceDir = ctx.workspaceDir;
-      if (!workspaceDir) return;
-      const stateDir = path.join(workspaceDir, ".reflex", ".state");
-      try { rmSync(stateDir, { recursive: true, force: true }); } catch {}
-    };
-
-    api.on("session_start", (event, ctx) => clearState(ctx));
-    api.on("session_end", (event, ctx) => clearState(ctx));
   },
 };
