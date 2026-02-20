@@ -26,3 +26,5 @@ Agents forget to read docs and use skills even when everything is documented. Re
 **Session state tracking** — already-injected items are skipped within a session. No duplicate injections, no wasted API calls.
 
 **Always exits 0** — hook never blocks the agent. Errors go to stderr only.
+
+**Thinking blocks excluded from routing input** — the hook only passes user and assistant text to the router, not the model's thinking blocks. Rationale: routing should be based on user intent, not internal reasoning. Thinking blocks add tokens and noise without improving routing decisions. Open question: thinking blocks might occasionally contain signals (e.g. the model realizes mid-thought it needs a doc it hasn't read). Worth revisiting if routing quality is poor on complex multi-turn conversations.
