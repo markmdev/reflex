@@ -2,11 +2,8 @@
 """
 Reflex session cleanup hook.
 
-Clears .reflex/.state/ on session start (startup, clear) and session end,
-so each new session starts with a fresh injection history.
-
-Does NOT clean on compact — injected state should survive compaction so
-docs/skills aren't re-injected mid-session.
+Clears .reflex/.state/ on session start (startup, clear, compact) and
+session end, so each session starts with a fresh injection history.
 """
 
 import json
@@ -15,7 +12,7 @@ import shutil
 import sys
 from pathlib import Path
 
-CLEAN_SOURCES = {"startup", "clear"}
+CLEAN_SOURCES = {"startup", "clear", "compact"}
 
 
 def main():
