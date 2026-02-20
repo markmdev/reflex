@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/openai/openai-go"
@@ -24,10 +23,10 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, error) {
 	// Build prompt
 	prompt := Build(input.Messages, registry)
 
-	// Get API key
-	apiKey := os.Getenv(cfg.Provider.APIKeyEnv)
+	// Get API key: env var takes priority, then stored key
+	apiKey := ResolveAPIKey(cfg)
 	if apiKey == "" {
-		return empty, fmt.Errorf("env var %s not set", cfg.Provider.APIKeyEnv)
+		return empty, fmt.Errorf("no API key configured. Run: reflex config set api-key <your-key>")
 	}
 
 	// Call LLM
