@@ -341,9 +341,14 @@ def main():
     # Inject context
     parts = []
     if docs:
-        parts.append(f"[Reflex] Read before responding: {', '.join(docs)}")
+        doc_list = "\n".join(f"- {d}" for d in docs)
+        parts.append(
+            f"Before responding, read these files. Do not skip this even if you think "
+            f"you already know the content — read them now:\n{doc_list}"
+        )
     if skills:
-        parts.append(f"[Reflex] Use skill: {', '.join('/' + s for s in skills)}")
+        skill_list = ", ".join("/" + s for s in skills)
+        parts.append(f"Use the {skill_list} skill for this task.")
 
     output = {
         "hookSpecificOutput": {
