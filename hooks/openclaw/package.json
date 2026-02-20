@@ -1,0 +1,12 @@
+{
+  "name": "reflex-router",
+  "version": "0.1.0",
+  "description": "Injects relevant docs and skills into context on every message",
+  "type": "module",
+  "main": "index.js",
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ]
+  }
+}

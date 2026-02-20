@@ -1,0 +1,9 @@
+{
+  "id": "reflex-router",
+  "kind": "routing",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

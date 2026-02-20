@@ -1,8 +1,9 @@
 /**
- * Reflex — OpenClaw agent:bootstrap Hook
+ * Reflex — OpenClaw Plugin
  *
  * On every message, auto-discovers skills and docs in the workspace,
- * calls `reflex route`, and injects relevant ones into the system prompt.
+ * calls `reflex route`, and prepends relevant context to the user's prompt
+ * via the before_agent_start hook.
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -10,51 +11,44 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-/** How many recent transcript entries to pass to the router. */
 const LOOKBACK = 10;
 
-/** Directories to skip when globbing for docs. */
 const SKIP_DIRS = new Set([
   ".git", "node_modules", ".next", "dist", "build", "__pycache__",
   ".venv", "venv", ".tox", "coverage", ".turbo", "vendor", "target",
 ]);
 
 
-// --- Transcript ---
+// --- Messages ---
 
 /**
- * Extract the last N user/assistant messages from an OpenClaw session JSONL.
- * Session entries look like:
- *   {"type":"message","message":{"role":"user","content":[{"type":"text","text":"..."}]}}
+ * Extract conversation messages from event.messages.
+ * OpenClaw passes messages as { role, content } objects where content is
+ * either a string or an array of content blocks.
  */
-function extractMessages(sessionPath, lookback) {
-  if (!existsSync(sessionPath)) return [];
+function extractMessages(messages, lookback) {
+  if (!Array.isArray(messages)) return [];
 
-  const lines = readFileSync(sessionPath, "utf-8").split("\n").filter(Boolean);
-  const messages = [];
+  const result = [];
+  for (const msg of messages.slice(-lookback)) {
+    const role = msg?.role;
+    if (role !== "user" && role !== "assistant") continue;
 
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (messages.length >= lookback) break;
-    try {
-      const entry = JSON.parse(lines[i]);
-      if (entry.type !== "message") continue;
-
-      const msg = entry.message;
-      const role = msg?.role;
-      if (role !== "user" && role !== "assistant") continue;
-
-      const text = (msg.content ?? [])
-        .filter((b) => b.type === "text")
-        .map((b) => b.text ?? "")
+    let text = "";
+    if (typeof msg.content === "string") {
+      text = msg.content.trim();
+    } else if (Array.isArray(msg.content)) {
+      text = msg.content
+        .filter((b) => b?.type === "text")
+        .map((b) => b?.text ?? "")
         .join("")
         .trim();
+    }
 
-      if (!text) continue;
-      messages.unshift({ type: role, text: text.slice(0, 2000) });
-    } catch {}
+    if (!text) continue;
+    result.push({ type: role, text: text.slice(0, 2000) });
   }
-
-  return messages;
+  return result;
 }
 
 
@@ -119,7 +113,6 @@ function findMarkdownFiles(dir) {
 
 /** Discover docs: any .md file with both `summary` and `read_when` frontmatter. */
 function discoverDocs(workspaceDir) {
-  // Exclude skills directories — those are skills, not docs
   const excluded = [
     path.join(workspaceDir, ".openclaw", "skills") + path.sep,
     path.join(workspaceDir, ".claude", "skills") + path.sep,
@@ -216,81 +209,80 @@ function callReflex(payload) {
 
 // --- Session state ---
 
-function loadSessionState(workspaceDir, sessionId) {
-  const stateFile = path.join(workspaceDir, ".reflex", ".state", `${sessionId}.json`);
+function loadSessionState(workspaceDir, sessionKey) {
+  const stateFile = path.join(workspaceDir, ".reflex", ".state", `${sessionKey}.json`);
   try { return JSON.parse(readFileSync(stateFile, "utf-8")); }
   catch { return { docs_read: [], skills_used: [] }; }
 }
 
-function saveSessionState(workspaceDir, sessionId, state) {
+function saveSessionState(workspaceDir, sessionKey, state) {
   const stateDir = path.join(workspaceDir, ".reflex", ".state");
   try {
     mkdirSync(stateDir, { recursive: true });
-    writeFileSync(path.join(stateDir, `${sessionId}.json`), JSON.stringify(state));
+    writeFileSync(path.join(stateDir, `${sessionKey}.json`), JSON.stringify(state));
   } catch {}
 }
 
 
-// --- Handler ---
+// --- Plugin ---
 
-const handler = async (event) => {
-  if (event.type !== "agent" || event.action !== "bootstrap") return;
+export default {
+  id: "reflex-router",
+  name: "Reflex Router",
+  description: "Injects relevant docs and skills into context on every message",
+  kind: "routing",
 
-  const ctx = event.context;
-  const workspaceDir = ctx.workspaceDir;
-  if (!workspaceDir) return;
+  register(api) {
+    api.on("before_agent_start", async (event, ctx) => {
+      const workspaceDir = ctx.workspaceDir;
+      if (!workspaceDir) return;
 
-  const agentId = ctx.agentId ?? "main";
-  const sessionId = ctx.sessionId ?? event.sessionKey ?? "default";
+      const sessionKey = ctx.sessionKey ?? "default";
 
-  // Discover registry — bail early if nothing to route
-  const docs = discoverDocs(workspaceDir);
-  const skills = discoverSkills(workspaceDir);
-  if (!docs.length && !skills.length) return;
+      // Discover registry — bail early if nothing to route
+      const docs = discoverDocs(workspaceDir);
+      const skills = discoverSkills(workspaceDir);
+      if (!docs.length && !skills.length) return;
 
-  // Read conversation history from session transcript
-  const sessionPath = path.join(
-    homedir(), ".openclaw", "agents", agentId, "sessions", `${sessionId}.jsonl`
-  );
-  const messages = extractMessages(sessionPath, LOOKBACK);
+      // event.messages has the conversation history directly — no file reading needed
+      const messages = extractMessages(event.messages, LOOKBACK);
+      // Append current prompt if not already present
+      if (event.prompt?.trim() && !messages.some((m) => m.text === event.prompt.trim())) {
+        messages.push({ type: "user", text: event.prompt.trim().slice(0, 2000) });
+      }
 
-  // Route
-  const sessionState = loadSessionState(workspaceDir, sessionId);
-  const result = callReflex({
-    messages,
-    registry: { docs, skills },
-    session: sessionState,
-    metadata: {},
-  });
+      // Route
+      const sessionState = loadSessionState(workspaceDir, sessionKey);
+      const result = callReflex({
+        messages,
+        registry: { docs, skills },
+        session: sessionState,
+        metadata: {},
+      });
 
-  const newDocs = result.docs ?? [];
-  const newSkills = result.skills ?? [];
-  if (!newDocs.length && !newSkills.length) return;
+      const newDocs = result.docs ?? [];
+      const newSkills = result.skills ?? [];
+      if (!newDocs.length && !newSkills.length) return;
 
-  // Persist what was injected so we don't repeat it
-  sessionState.docs_read = [...new Set([...sessionState.docs_read, ...newDocs])];
-  sessionState.skills_used = [...new Set([...sessionState.skills_used, ...newSkills])];
-  saveSessionState(workspaceDir, sessionId, sessionState);
+      // Persist injected items to avoid repeating across turns
+      sessionState.docs_read = [...new Set([...sessionState.docs_read, ...newDocs])];
+      sessionState.skills_used = [...new Set([...sessionState.skills_used, ...newSkills])];
+      saveSessionState(workspaceDir, sessionKey, sessionState);
 
-  // Build injection content
-  const parts = [];
-  if (newDocs.length) {
-    const docList = newDocs.map((d) => `- ${d}`).join("\n");
-    parts.push(
-      `Before responding, read these files. Do not skip this even if you think ` +
-      `you already know the content — read them now:\n${docList}`
-    );
-  }
-  if (newSkills.length) {
-    parts.push(`Use the ${newSkills.map((s) => "/" + s).join(", ")} skill for this task.`);
-  }
+      // Build injection — returned as prependContext, prepended to the user's prompt
+      const parts = [];
+      if (newDocs.length) {
+        const docList = newDocs.map((d) => `- ${d}`).join("\n");
+        parts.push(
+          `Before responding, read these files. Do not skip this even if you think ` +
+          `you already know the content — read them now:\n${docList}`
+        );
+      }
+      if (newSkills.length) {
+        parts.push(`Use the ${newSkills.map((s) => "/" + s).join(", ")} skill for this task.`);
+      }
 
-  ctx.bootstrapFiles.push({
-    name: "AGENTS.md",
-    path: "/reflex/injected",
-    content: parts.join("\n\n"),
-    missing: false,
-  });
+      return { prependContext: parts.join("\n\n") };
+    });
+  },
 };
-
-export default handler;
