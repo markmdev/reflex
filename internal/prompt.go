@@ -50,9 +50,7 @@ func Build(messages []Message, registry []RegistryItem) string {
 				sb.WriteString(fmt.Sprintf("[user]: %s\n", text))
 			case "assistant":
 				sb.WriteString(fmt.Sprintf("[assistant]: %s\n", text))
-			case "thinking":
-				sb.WriteString(fmt.Sprintf("[thinking]: %s\n", text))
-			}
+}
 		}
 	}
 

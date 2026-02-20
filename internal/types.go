@@ -10,7 +10,7 @@ type RouteInput struct {
 
 // Message is a single conversation turn.
 type Message struct {
-	Type string `json:"type"` // "user", "assistant", "thinking"
+	Type string `json:"type"` // "user", "assistant"
 	Text string `json:"text"`
 }
 

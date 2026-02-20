@@ -66,14 +66,11 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
                         continue
                     entries.insert(0, {"type": "user", "text": text[:2000]})
 
-        # Assistant messages
+        # Assistant messages (text only — thinking blocks are internal reasoning, not useful for routing)
         elif entry_type == "assistant" and role == "assistant" and isinstance(content, list):
             for block in content:
-                btype = block.get("type", "")
-                if btype == "text" and block.get("text", "").strip():
+                if block.get("type") == "text" and block.get("text", "").strip():
                     entries.insert(0, {"type": "assistant", "text": block["text"][:2000]})
-                elif btype == "thinking" and block.get("thinking", "").strip():
-                    entries.insert(0, {"type": "thinking", "text": block["thinking"][:1000]})
 
     return entries[-lookback:]
 
