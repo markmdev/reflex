@@ -74,7 +74,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
         if entry_type == "user" and role == "user" and isinstance(content, str) and content.strip():
             if _is_noise(content):
                 continue
-            entries.insert(0, {"type": "user", "text": content[:2000]})
+            entries.insert(0, {"type": "user", "text": content.strip()[:2000]})
 
         # User content blocks (non-tool-result)
         elif entry_type == "user" and role == "user" and isinstance(content, list):
@@ -82,7 +82,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
                 continue
             for block in content:
                 if block.get("type") == "text" and block.get("text", "").strip():
-                    text = block["text"]
+                    text = block["text"].strip()
                     if _is_noise(text):
                         continue
                     entries.insert(0, {"type": "user", "text": text[:2000]})
@@ -91,7 +91,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
         elif entry_type == "assistant" and role == "assistant" and isinstance(content, list):
             for block in content:
                 if block.get("type") == "text" and block.get("text", "").strip():
-                    entries.insert(0, {"type": "assistant", "text": block["text"][:2000]})
+                    entries.insert(0, {"type": "assistant", "text": block["text"].strip()[:2000]})
 
     return entries[-lookback:]
 
@@ -288,7 +288,7 @@ def main():
     messages = extract_transcript(transcript_path, LOOKBACK) if transcript_path else []
 
     # Append the current message — it's not in the transcript yet when this hook fires
-    current_prompt = input_data.get("prompt", "")
+    current_prompt = input_data.get("prompt", "").strip()
     if current_prompt and not _is_noise(current_prompt):
         messages.append({"type": "user", "text": current_prompt[:2000]})
 
