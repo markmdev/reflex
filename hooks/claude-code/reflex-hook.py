@@ -9,6 +9,7 @@ then calls `reflex route` and injects relevant context.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -236,10 +237,29 @@ def save_session_state(state_dir: Path, session_id: str, state: dict):
         pass
 
 
+def find_reflex_bin() -> str:
+    """Find the reflex binary. Checks REFLEX_BIN env var, PATH, then common install locations."""
+    if explicit := os.environ.get("REFLEX_BIN"):
+        return explicit
+    if found := shutil.which("reflex"):
+        return found
+    home = Path.home()
+    candidates = [
+        home / "go" / "bin" / "reflex",       # go install default
+        home / ".local" / "bin" / "reflex",    # common user-local installs
+        Path("/opt/homebrew/bin/reflex"),       # Homebrew on Apple Silicon
+        Path("/usr/local/bin/reflex"),          # Homebrew on Intel / Linux manual
+    ]
+    for path in candidates:
+        if path.exists():
+            return str(path)
+    return "reflex"  # will fail with clear FileNotFoundError
+
+
 def call_reflex(payload: dict) -> dict:
     """Call `reflex route` with the given payload."""
     empty = {"docs": [], "skills": []}
-    reflex_bin = os.environ.get("REFLEX_BIN", "reflex")
+    reflex_bin = find_reflex_bin()
 
     try:
         result = subprocess.run(
