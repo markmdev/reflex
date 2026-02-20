@@ -274,8 +274,10 @@ def main():
         sys.exit(0)
 
     transcript_path = input_data.get("transcript_path", "")
-    session_id = input_data.get("session_id", "default")
-    project_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", "."))
+    # Use transcript filename stem as session key — guaranteed stable within a session
+    session_key = Path(transcript_path).stem if transcript_path else input_data.get("session_id", "default")
+    # cwd from input is more reliable than CLAUDE_PROJECT_DIR env var
+    project_dir = Path(input_data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR", "."))
     state_dir = project_dir / ".reflex" / ".state"
 
     # Auto-discover registry — no config file needed
@@ -294,7 +296,7 @@ def main():
         messages.append({"type": "user", "text": current_prompt[:2000]})
 
     # Load session state
-    session = load_session_state(state_dir, session_id)
+    session = load_session_state(state_dir, session_key)
 
     # Call reflex
     payload = {
@@ -314,7 +316,7 @@ def main():
     # Update session state
     session["docs_read"] = list(set(session.get("docs_read", []) + docs))
     session["skills_used"] = list(set(session.get("skills_used", []) + skills))
-    save_session_state(state_dir, session_id, session)
+    save_session_state(state_dir, session_key, session)
 
     # Inject context
     parts = []

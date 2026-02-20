@@ -34,7 +34,7 @@ def main():
     elif event != "SessionEnd":
         sys.exit(0)
 
-    project_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", "."))
+    project_dir = Path(input_data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR", "."))
     state_dir = project_dir / ".reflex" / ".state"
 
     if state_dir.exists():

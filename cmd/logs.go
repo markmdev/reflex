@@ -88,8 +88,13 @@ func runLogs(args []string) error {
 			}
 		}
 
-		fmt.Printf("%-19s  %-20s  %-30s  %dms  (%dm/%dr)\n",
-			local, project, result, e.LatencyMS, len(e.Messages), len(e.Registry.Docs)+len(e.Registry.Skills))
+		excluded := len(e.Excluded.Docs) + len(e.Excluded.Skills)
+		excludedStr := ""
+		if excluded > 0 {
+			excludedStr = fmt.Sprintf(" -%d", excluded)
+		}
+		fmt.Printf("%-19s  %-20s  %-30s  %dms  (%dm/%dr%s)\n",
+			local, project, result, e.LatencyMS, len(e.Messages), len(e.Registry.Docs)+len(e.Registry.Skills), excludedStr)
 	}
 
 	fmt.Printf("\nLog file: %s\n", p)

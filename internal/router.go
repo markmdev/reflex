@@ -11,14 +11,16 @@ import (
 )
 
 // Route decides what docs and skills to inject for the given input.
-// Returns the result, the prompt, the raw LLM response, and any error.
-func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) {
+// Returns the result, the excluded registry, the prompt, the raw LLM response, and any error.
+func Route(input RouteInput, cfg *Config) (*RouteResult, Registry, string, string, error) {
 	empty := &RouteResult{Docs: []string{}, Skills: []string{}}
+	noExcluded := Registry{Docs: []RegistryDoc{}, Skills: []RegistrySkill{}}
 
 	// Filter registry: remove items already used this session
 	registry := filterRegistry(input.Registry, input.Session)
+	excluded := excludedRegistry(input.Registry, registry)
 	if len(registry.Docs) == 0 && len(registry.Skills) == 0 {
-		return empty, "", "", nil
+		return empty, noExcluded, "", "", nil
 	}
 
 	// Build prompt
@@ -27,7 +29,7 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) 
 	// Get API key: env var takes priority, then stored key
 	apiKey := ResolveAPIKey(cfg)
 	if apiKey == "" {
-		return empty, "", "", fmt.Errorf("no API key configured. Run: reflex config set api-key <your-key>")
+		return empty, noExcluded, "", "", fmt.Errorf("no API key configured. Run: reflex config set api-key <your-key>")
 	}
 
 	// Call LLM
@@ -43,16 +45,16 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) 
 		},
 	})
 	if err != nil {
-		return empty, prompt, "", fmt.Errorf("LLM error: %w", err)
+		return empty, excluded, prompt, "", fmt.Errorf("LLM error: %w", err)
 	}
 
 	if len(resp.Choices) == 0 {
-		return empty, prompt, "", fmt.Errorf("LLM returned no choices")
+		return empty, excluded, prompt, "", fmt.Errorf("LLM returned no choices")
 	}
 
 	raw := strings.TrimSpace(resp.Choices[0].Message.Content)
 	if raw == "" {
-		return empty, prompt, "", fmt.Errorf("LLM returned empty response")
+		return empty, excluded, prompt, "", fmt.Errorf("LLM returned empty response")
 	}
 
 	// Strip markdown fences if present
@@ -61,7 +63,7 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) 
 	// Parse response
 	var result RouteResult
 	if err := json.Unmarshal([]byte(cleaned), &result); err != nil {
-		return empty, prompt, raw, fmt.Errorf("failed to parse LLM response: %w", err)
+		return empty, excluded, prompt, raw, fmt.Errorf("failed to parse LLM response: %w", err)
 	}
 
 	// Ensure non-nil slices
@@ -72,7 +74,33 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) 
 		result.Skills = []string{}
 	}
 
-	return &result, prompt, raw, nil
+	return &result, excluded, prompt, raw, nil
+}
+
+// excludedRegistry returns items in full that are not in filtered.
+func excludedRegistry(full, filtered Registry) Registry {
+	filteredDocs := make(map[string]bool, len(filtered.Docs))
+	for _, d := range filtered.Docs {
+		filteredDocs[d.Path] = true
+	}
+	filteredSkills := make(map[string]bool, len(filtered.Skills))
+	for _, s := range filtered.Skills {
+		filteredSkills[s.Name] = true
+	}
+
+	docs := []RegistryDoc{}
+	for _, d := range full.Docs {
+		if !filteredDocs[d.Path] {
+			docs = append(docs, d)
+		}
+	}
+	skills := []RegistrySkill{}
+	for _, s := range full.Skills {
+		if !filteredSkills[s.Name] {
+			skills = append(skills, s)
+		}
+	}
+	return Registry{Docs: docs, Skills: skills}
 }
 
 // filterRegistry removes items already read/used this session.
