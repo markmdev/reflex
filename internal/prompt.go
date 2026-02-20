@@ -2,7 +2,6 @@ package internal
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 )
 
@@ -12,21 +11,15 @@ func Build(messages []Message, registry []RegistryItem) string {
 
 	sb.WriteString("You are a context router for an AI agent. Your job: decide what docs or skills the agent needs to read before responding to the current conversation.\n\n")
 
-	// Registry
+	// Registry as JSON
 	sb.WriteString("## Available docs and skills\n\n")
 	if len(registry) == 0 {
-		sb.WriteString("(none)\n")
+		sb.WriteString("[]\n")
 	} else {
-		for _, item := range registry {
-			desc := item.Description
-			if desc == "" {
-				desc = item.Summary
-			}
-			if item.Type == "doc" {
-				sb.WriteString(fmt.Sprintf("- [doc] %s: %s\n", item.Path, desc))
-			} else if item.Type == "skill" {
-				sb.WriteString(fmt.Sprintf("- [skill] %s: %s\n", item.Name, desc))
-			}
+		regJSON, err := json.MarshalIndent(registry, "", "  ")
+		if err == nil {
+			sb.Write(regJSON)
+			sb.WriteByte('\n')
 		}
 	}
 

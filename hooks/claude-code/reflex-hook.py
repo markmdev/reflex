@@ -213,7 +213,6 @@ def discover_docs(project_dir: Path) -> list[dict]:
             "type": "doc",
             "path": str(md_file.relative_to(project_dir)),
             "summary": summary,
-            "read_when": read_when,
         })
 
     return items
