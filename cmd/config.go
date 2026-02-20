@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/markmdev/reflex/internal"
@@ -18,7 +17,7 @@ func runConfig(args []string) error {
 		return configShow()
 	case "set":
 		if len(args) < 3 {
-			return fmt.Errorf("usage: reflex config set <key> <value>\n\nKeys: api-key, model, base-url, max-tokens")
+			return fmt.Errorf("usage: reflex config set <key> <value>\n\nKeys: api-key, model, base-url")
 		}
 		return configSet(args[1], args[2])
 	case "reset":
@@ -46,10 +45,9 @@ func configShow() error {
 	}
 
 	fmt.Printf("Provider:\n")
-	fmt.Printf("  api-key:    %s\n", keyDisplay)
-	fmt.Printf("  model:      %s\n", p.Model)
-	fmt.Printf("  base-url:   %s\n", p.BaseURL)
-	fmt.Printf("  max-tokens: %d\n", p.MaxTokens)
+	fmt.Printf("  api-key:  %s\n", keyDisplay)
+	fmt.Printf("  model:    %s\n", p.Model)
+	fmt.Printf("  base-url: %s\n", p.BaseURL)
 	fmt.Printf("\nGlobal config: %s\n", internal.GlobalConfigPath())
 	return nil
 }
@@ -64,14 +62,8 @@ func configSet(key, value string) error {
 		cfg.Provider.Model = value
 	case "base-url", "base_url":
 		cfg.Provider.BaseURL = value
-	case "max-tokens", "max_tokens":
-		n, err := strconv.Atoi(value)
-		if err != nil {
-			return fmt.Errorf("max-tokens must be a number")
-		}
-		cfg.Provider.MaxTokens = n
 	default:
-		return fmt.Errorf("unknown key: %s\n\nValid keys: api-key, model, base-url, max-tokens", key)
+		return fmt.Errorf("unknown key: %s\n\nValid keys: api-key, model, base-url", key)
 	}
 
 	if err := internal.SaveGlobalConfig(cfg); err != nil {

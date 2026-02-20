@@ -12,7 +12,6 @@ type ProviderConfig struct {
 	APIKeyEnv string `yaml:"api_key_env,omitempty"` // read key from this env var (optional)
 	APIKey    string `yaml:"api_key,omitempty"`     // store key directly (set via `reflex config set`)
 	Model     string `yaml:"model"`
-	MaxTokens int    `yaml:"max_tokens"`
 }
 
 type Config struct {
@@ -22,9 +21,8 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Provider: ProviderConfig{
-			BaseURL:   "https://api.moonshot.ai/v1",
-			Model:     "kimi-k2.5",
-			MaxTokens: 256,
+			BaseURL: "https://api.moonshot.ai/v1",
+			Model:   "kimi-k2.5",
 		},
 	}
 }
@@ -62,10 +60,6 @@ func LoadConfig(configPath string) (*Config, error) {
 	if cfg.Provider.Model == "" {
 		cfg.Provider.Model = "kimi-k2.5-preview"
 	}
-	if cfg.Provider.MaxTokens == 0 {
-		cfg.Provider.MaxTokens = 256
-	}
-
 	return cfg, nil
 }
 
@@ -123,9 +117,6 @@ func mergeConfig(cfg *Config, path string) {
 	}
 	if overlay.Provider.Model != "" {
 		cfg.Provider.Model = overlay.Provider.Model
-	}
-	if overlay.Provider.MaxTokens != 0 {
-		cfg.Provider.MaxTokens = overlay.Provider.MaxTokens
 	}
 }
 
