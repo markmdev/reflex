@@ -11,14 +11,14 @@ import (
 )
 
 // Route decides what docs and skills to inject for the given input.
-// Returns the result, the prompt sent to the LLM (empty string if no API call was made), and any error.
-func Route(input RouteInput, cfg *Config) (*RouteResult, string, error) {
+// Returns the result, the prompt, the raw LLM response, and any error.
+func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) {
 	empty := &RouteResult{Docs: []string{}, Skills: []string{}}
 
 	// Filter registry: remove items already used this session
 	registry := filterRegistry(input.Registry, input.Session)
 	if len(registry) == 0 {
-		return empty, "", nil
+		return empty, "", "", nil
 	}
 
 	// Build prompt
@@ -27,7 +27,7 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, error) {
 	// Get API key: env var takes priority, then stored key
 	apiKey := ResolveAPIKey(cfg)
 	if apiKey == "" {
-		return empty, "", fmt.Errorf("no API key configured. Run: reflex config set api-key <your-key>")
+		return empty, "", "", fmt.Errorf("no API key configured. Run: reflex config set api-key <your-key>")
 	}
 
 	// Call LLM
@@ -44,22 +44,25 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, error) {
 		MaxTokens: openai.Int(int64(cfg.Provider.MaxTokens)),
 	})
 	if err != nil {
-		return empty, prompt, fmt.Errorf("LLM error: %w", err)
+		return empty, prompt, "", fmt.Errorf("LLM error: %w", err)
 	}
 
 	if len(resp.Choices) == 0 {
-		return empty, prompt, nil
+		return empty, prompt, "", fmt.Errorf("LLM returned no choices")
 	}
 
 	raw := strings.TrimSpace(resp.Choices[0].Message.Content)
+	if raw == "" {
+		return empty, prompt, "", fmt.Errorf("LLM returned empty response")
+	}
 
 	// Strip markdown fences if present
-	raw = stripFences(raw)
+	cleaned := stripFences(raw)
 
 	// Parse response
 	var result RouteResult
-	if err := json.Unmarshal([]byte(raw), &result); err != nil {
-		return empty, prompt, fmt.Errorf("failed to parse LLM response: %w (raw: %s)", err, raw)
+	if err := json.Unmarshal([]byte(cleaned), &result); err != nil {
+		return empty, prompt, raw, fmt.Errorf("failed to parse LLM response: %w", err)
 	}
 
 	// Ensure non-nil slices
@@ -70,7 +73,7 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, error) {
 		result.Skills = []string{}
 	}
 
-	return &result, prompt, nil
+	return &result, prompt, raw, nil
 }
 
 // filterRegistry removes items already read/used this session.

@@ -50,9 +50,9 @@ func Build(messages []Message, registry []RegistryItem) string {
 Based on the conversation above, decide what the agent needs before responding.
 
 Rules:
-- Only include items that are genuinely relevant to what the user is asking RIGHT NOW
-- If the user is asking about something unrelated to any doc or skill, return empty lists
-- Be conservative: when in doubt, don't include it
+- Include any item that could plausibly be useful for what the user is asking
+- When in doubt, include it — it's better to over-suggest than to miss something relevant
+- Only exclude items that are clearly unrelated to the conversation
 - Return ONLY valid JSON, no explanation, no markdown fences
 
 Return exactly:
