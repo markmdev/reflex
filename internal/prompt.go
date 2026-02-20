@@ -19,15 +19,7 @@ func Build(messages []Message, registry Registry) string {
 
 	// Recent conversation as compact JSON
 	sb.WriteString("\n## Recent conversation\n\n")
-	truncated := make([]Message, len(messages))
-	for i, msg := range messages {
-		text := msg.Text
-		if len(text) > 500 {
-			text = text[:500] + "..."
-		}
-		truncated[i] = Message{Type: msg.Type, Text: text}
-	}
-	msgJSON, _ := json.Marshal(truncated)
+	msgJSON, _ := json.Marshal(messages)
 	sb.Write(msgJSON)
 	sb.WriteByte('\n')
 

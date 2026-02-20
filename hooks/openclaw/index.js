@@ -46,7 +46,7 @@ function extractMessages(messages, lookback) {
     }
 
     if (!text) continue;
-    result.push({ type: role, text: text.slice(0, 2000) });
+    result.push({ type: role, text: text });
   }
   return result;
 }

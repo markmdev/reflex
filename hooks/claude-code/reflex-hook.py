@@ -75,7 +75,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
         if entry_type == "user" and role == "user" and isinstance(content, str) and content.strip():
             if _is_noise(content):
                 continue
-            entries.insert(0, {"type": "user", "text": content.strip()[:2000]})
+            entries.insert(0, {"type": "user", "text": content.strip()})
 
         # User content blocks (non-tool-result)
         elif entry_type == "user" and role == "user" and isinstance(content, list):
@@ -86,7 +86,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
                     text = block["text"].strip()
                     if _is_noise(text):
                         continue
-                    entries.insert(0, {"type": "user", "text": text[:2000]})
+                    entries.insert(0, {"type": "user", "text": text})
 
         # Assistant messages (text only — thinking blocks are internal reasoning, not useful for routing)
         elif entry_type == "assistant" and role == "assistant" and isinstance(content, list):
