@@ -24,6 +24,27 @@ SKIP_DIRS = {
 }
 
 
+# Tags that mark system-injected content, not real user messages
+_NOISE_TAGS = (
+    "<local-command-caveat>",
+    "<command-name>",
+    "<local-command-stdout>",
+    "<system-reminder>",
+    "<injected-project-context>",
+    "<user-prompt-submit-hook>",
+)
+
+def _is_noise(text: str) -> bool:
+    """Return True if this message is system-injected noise, not a real user message."""
+    stripped = text.strip()
+    if any(stripped.startswith(tag) for tag in _NOISE_TAGS):
+        return True
+    # Large blobs with injected context markers
+    if len(stripped) > 2000 and any(tag in stripped for tag in _NOISE_TAGS):
+        return True
+    return False
+
+
 def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
     """Extract the last N meaningful entries from the transcript JSONL."""
     entries = []
@@ -51,7 +72,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
 
         # User text message
         if entry_type == "user" and role == "user" and isinstance(content, str) and content.strip():
-            if len(content) > 5000 and ("<injected-project-context>" in content or "<system-reminder>" in content):
+            if _is_noise(content):
                 continue
             entries.insert(0, {"type": "user", "text": content[:2000]})
 
@@ -62,7 +83,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
             for block in content:
                 if block.get("type") == "text" and block.get("text", "").strip():
                     text = block["text"]
-                    if len(text) > 5000 and ("<injected-project-context>" in text or "<system-reminder>" in text):
+                    if _is_noise(text):
                         continue
                     entries.insert(0, {"type": "user", "text": text[:2000]})
 
