@@ -41,7 +41,7 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) 
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(prompt),
 		},
-		MaxTokens: openai.Int(int64(cfg.Provider.MaxTokens)),
+		MaxCompletionTokens: openai.Int(int64(cfg.Provider.MaxTokens)),
 	})
 	if err != nil {
 		return empty, prompt, "", fmt.Errorf("LLM error: %w", err)
