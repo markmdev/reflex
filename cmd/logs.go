@@ -89,7 +89,7 @@ func runLogs(args []string) error {
 		}
 
 		fmt.Printf("%-19s  %-20s  %-30s  %dms  (%dm/%dr)\n",
-			local, project, result, e.LatencyMS, len(e.Messages), len(e.Registry))
+			local, project, result, e.LatencyMS, len(e.Messages), len(e.Registry.Docs)+len(e.Registry.Skills))
 	}
 
 	fmt.Printf("\nLog file: %s\n", p)

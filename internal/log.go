@@ -11,7 +11,7 @@ type LogEntry struct {
 	Timestamp   string         `json:"ts"`
 	CWD         string         `json:"cwd"`
 	Messages    []Message      `json:"messages"`
-	Registry    []RegistryItem `json:"registry"`
+	Registry    Registry       `json:"registry"`
 	Prompt      string         `json:"prompt,omitempty"`
 	RawResponse string         `json:"raw_response,omitempty"`
 	Result      *RouteResult   `json:"result"`

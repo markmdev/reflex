@@ -166,7 +166,6 @@ def discover_skills(project_dir: Path) -> list[dict]:
         if not name or not description:
             continue
         items.append({
-            "type": "skill",
             "name": name,
             "description": description,
         })
@@ -210,9 +209,9 @@ def discover_docs(project_dir: Path) -> list[dict]:
             read_when = [read_when]
 
         items.append({
-            "type": "doc",
             "path": str(md_file.relative_to(project_dir)),
             "summary": summary,
+            "read_when": read_when,
         })
 
     return items
@@ -280,9 +279,11 @@ def main():
     state_dir = project_dir / ".reflex" / ".state"
 
     # Auto-discover registry — no config file needed
-    registry = discover_skills(project_dir) + discover_docs(project_dir)
-    if not registry:
+    docs = discover_docs(project_dir)
+    skills = discover_skills(project_dir)
+    if not docs and not skills:
         sys.exit(0)
+    registry = {"docs": docs, "skills": skills}
 
     # Extract recent conversation from transcript
     messages = extract_transcript(transcript_path, LOOKBACK) if transcript_path else []

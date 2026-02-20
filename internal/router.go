@@ -17,7 +17,7 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) 
 
 	// Filter registry: remove items already used this session
 	registry := filterRegistry(input.Registry, input.Session)
-	if len(registry) == 0 {
+	if len(registry.Docs) == 0 && len(registry.Skills) == 0 {
 		return empty, "", "", nil
 	}
 
@@ -76,7 +76,7 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, string, string, error) 
 }
 
 // filterRegistry removes items already read/used this session.
-func filterRegistry(registry []RegistryItem, session SessionState) []RegistryItem {
+func filterRegistry(registry Registry, session SessionState) Registry {
 	readSet := make(map[string]bool, len(session.DocsRead))
 	for _, d := range session.DocsRead {
 		readSet[d] = true
@@ -86,17 +86,19 @@ func filterRegistry(registry []RegistryItem, session SessionState) []RegistryIte
 		usedSet[s] = true
 	}
 
-	var filtered []RegistryItem
-	for _, item := range registry {
-		if item.Type == "doc" && readSet[item.Path] {
-			continue
+	docs := []RegistryDoc{}
+	for _, doc := range registry.Docs {
+		if !readSet[doc.Path] {
+			docs = append(docs, doc)
 		}
-		if item.Type == "skill" && usedSet[item.Name] {
-			continue
-		}
-		filtered = append(filtered, item)
 	}
-	return filtered
+	skills := []RegistrySkill{}
+	for _, skill := range registry.Skills {
+		if !usedSet[skill.Name] {
+			skills = append(skills, skill)
+		}
+	}
+	return Registry{Docs: docs, Skills: skills}
 }
 
 // stripFences removes markdown code fences from LLM output.

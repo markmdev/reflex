@@ -6,7 +6,7 @@ import (
 )
 
 // Build constructs the routing prompt for the LLM.
-func Build(messages []Message, registry []RegistryItem) string {
+func Build(messages []Message, registry Registry) string {
 	var sb strings.Builder
 
 	sb.WriteString("You are a context router for an AI agent. Your job: decide what docs or skills the agent needs to read before responding to the current conversation.\n\n")
