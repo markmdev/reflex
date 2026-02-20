@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -29,22 +30,24 @@ func Build(messages []Message, registry []RegistryItem) string {
 		}
 	}
 
-	// Recent conversation
+	// Recent conversation as JSON
 	sb.WriteString("\n## Recent conversation\n\n")
 	if len(messages) == 0 {
 		sb.WriteString("(no messages)\n")
 	} else {
-		for _, msg := range messages {
+		// Truncate each message text before serializing
+		truncated := make([]Message, len(messages))
+		for i, msg := range messages {
 			text := msg.Text
 			if len(text) > 500 {
 				text = text[:500] + "..."
 			}
-			switch msg.Type {
-			case "user":
-				sb.WriteString(fmt.Sprintf("[user]: %s\n", text))
-			case "assistant":
-				sb.WriteString(fmt.Sprintf("[assistant]: %s\n", text))
-}
+			truncated[i] = Message{Type: msg.Type, Text: text}
+		}
+		msgJSON, err := json.MarshalIndent(truncated, "", "  ")
+		if err == nil {
+			sb.Write(msgJSON)
+			sb.WriteByte('\n')
 		}
 	}
 

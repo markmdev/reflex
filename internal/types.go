@@ -15,14 +15,14 @@ type Message struct {
 }
 
 // RegistryItem is a doc or skill available for injection.
+// Docs: Type="doc", Path set, Summary set.
+// Skills: Type="skill", Name set, Description set.
 type RegistryItem struct {
-	Type        string   `json:"type"`        // "doc" or "skill"
-	Path        string   `json:"path"`        // for docs: file path
-	Name        string   `json:"name"`        // for skills: skill name
-	Summary     string   `json:"summary"`     // one-line description
-	Description string   `json:"description"` // alias for summary (skills)
-	ReadWhen    []string `json:"read_when"`   // trigger keywords (docs)
-	UseWhen     []string `json:"use_when"`    // trigger keywords (skills)
+	Type        string `json:"type"`
+	Path        string `json:"path,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Summary     string `json:"summary,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 // SessionState tracks what has already been injected this session.

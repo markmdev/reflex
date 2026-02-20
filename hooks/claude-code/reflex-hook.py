@@ -165,14 +165,10 @@ def discover_skills(project_dir: Path) -> list[dict]:
         description = fm.get("description", "")
         if not name or not description:
             continue
-        use_when = fm.get("use_when", [])
-        if isinstance(use_when, str):
-            use_when = [use_when]
         items.append({
             "type": "skill",
             "name": name,
             "description": description,
-            "use_when": use_when,
         })
 
     return items
@@ -289,8 +285,13 @@ def main():
     if not registry:
         sys.exit(0)
 
-    # Extract recent conversation
+    # Extract recent conversation from transcript
     messages = extract_transcript(transcript_path, LOOKBACK) if transcript_path else []
+
+    # Append the current message — it's not in the transcript yet when this hook fires
+    current_prompt = input_data.get("prompt", "")
+    if current_prompt and not _is_noise(current_prompt):
+        messages.append({"type": "user", "text": current_prompt[:2000]})
 
     # Load session state
     session = load_session_state(state_dir, session_id)
