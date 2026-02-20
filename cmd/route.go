@@ -35,7 +35,7 @@ func runRoute(args []string) error {
 
 	// Route
 	start := time.Now()
-	result, routeErr := internal.Route(input, cfg)
+	result, prompt, routeErr := internal.Route(input, cfg)
 	latency := time.Since(start).Milliseconds()
 
 	errStr := ""
@@ -51,6 +51,7 @@ func runRoute(args []string) error {
 		CWD:       cwd,
 		Messages:  input.Messages,
 		Registry:  input.Registry,
+		Prompt:    prompt,
 		Result:    result,
 		LatencyMS: latency,
 		Model:     cfg.Provider.Model,

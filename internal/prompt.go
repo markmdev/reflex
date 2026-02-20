@@ -17,20 +17,14 @@ func Build(messages []Message, registry []RegistryItem) string {
 		sb.WriteString("(none)\n")
 	} else {
 		for _, item := range registry {
+			desc := item.Description
+			if desc == "" {
+				desc = item.Summary
+			}
 			if item.Type == "doc" {
-				triggers := strings.Join(item.ReadWhen, ", ")
-				summary := item.Summary
-				if summary == "" {
-					summary = item.Description
-				}
-				sb.WriteString(fmt.Sprintf("- [doc] %s: %s (read when: %s)\n", item.Path, summary, triggers))
+				sb.WriteString(fmt.Sprintf("- [doc] %s: %s\n", item.Path, desc))
 			} else if item.Type == "skill" {
-				triggers := strings.Join(item.UseWhen, ", ")
-				desc := item.Description
-				if desc == "" {
-					desc = item.Summary
-				}
-				sb.WriteString(fmt.Sprintf("- [skill] %s: %s (use when: %s)\n", item.Name, desc, triggers))
+				sb.WriteString(fmt.Sprintf("- [skill] %s: %s\n", item.Name, desc))
 			}
 		}
 	}
@@ -75,10 +69,3 @@ If nothing is needed:
 	return sb.String()
 }
 
-// formatTriggers returns a readable list of trigger keywords.
-func formatTriggers(keywords []string) string {
-	if len(keywords) == 0 {
-		return "general"
-	}
-	return strings.Join(keywords, ", ")
-}
