@@ -11,38 +11,25 @@ func Build(messages []Message, registry []RegistryItem) string {
 
 	sb.WriteString("You are a context router for an AI agent. Your job: decide what docs or skills the agent needs to read before responding to the current conversation.\n\n")
 
-	// Registry as JSON
+	// Registry as compact JSON
 	sb.WriteString("## Available docs and skills\n\n")
-	if len(registry) == 0 {
-		sb.WriteString("[]\n")
-	} else {
-		regJSON, err := json.MarshalIndent(registry, "", "  ")
-		if err == nil {
-			sb.Write(regJSON)
-			sb.WriteByte('\n')
-		}
-	}
+	regJSON, _ := json.Marshal(registry)
+	sb.Write(regJSON)
+	sb.WriteByte('\n')
 
-	// Recent conversation as JSON
+	// Recent conversation as compact JSON
 	sb.WriteString("\n## Recent conversation\n\n")
-	if len(messages) == 0 {
-		sb.WriteString("(no messages)\n")
-	} else {
-		// Truncate each message text before serializing
-		truncated := make([]Message, len(messages))
-		for i, msg := range messages {
-			text := msg.Text
-			if len(text) > 500 {
-				text = text[:500] + "..."
-			}
-			truncated[i] = Message{Type: msg.Type, Text: text}
+	truncated := make([]Message, len(messages))
+	for i, msg := range messages {
+		text := msg.Text
+		if len(text) > 500 {
+			text = text[:500] + "..."
 		}
-		msgJSON, err := json.MarshalIndent(truncated, "", "  ")
-		if err == nil {
-			sb.Write(msgJSON)
-			sb.WriteByte('\n')
-		}
+		truncated[i] = Message{Type: msg.Type, Text: text}
 	}
+	msgJSON, _ := json.Marshal(truncated)
+	sb.Write(msgJSON)
+	sb.WriteByte('\n')
 
 	sb.WriteString(`
 ## Instructions
