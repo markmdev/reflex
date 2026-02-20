@@ -2,9 +2,9 @@
 """
 Reflex — Claude Code UserPromptSubmit Hook
 
-On every user message, reads the recent conversation from the transcript,
-builds a registry from .reflex/registry.yaml, calls `reflex route`, and
-injects relevant docs/skills as additionalContext.
+On every user message, auto-discovers skills from .claude/skills/ and docs
+from any .md file in the project that has summary + read_when frontmatter,
+then calls `reflex route` and injects relevant context.
 """
 
 import json
@@ -16,6 +16,12 @@ from pathlib import Path
 
 # How many recent transcript entries to pass to the router
 LOOKBACK = 10
+
+# Directories to skip when globbing for docs
+SKIP_DIRS = {
+    ".git", "node_modules", ".next", "dist", "build", "__pycache__",
+    ".venv", "venv", ".tox", "coverage", ".turbo", "vendor", "target",
+}
 
 
 def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
@@ -72,15 +78,15 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
     return entries[-lookback:]
 
 
-def extract_frontmatter(file_path: Path) -> tuple[str, list[str]]:
-    """Extract summary and read_when from YAML frontmatter."""
+def parse_frontmatter(file_path: Path) -> dict:
+    """Parse YAML frontmatter from a markdown file. Returns dict of key→value."""
     try:
-        text = file_path.read_text()
+        text = file_path.read_text(encoding="utf-8", errors="ignore")
     except (OSError, IOError):
-        return "", []
+        return {}
 
     if not text.startswith("---"):
-        return "", []
+        return {}
 
     lines = text.split("\n")
     end = None
@@ -89,101 +95,112 @@ def extract_frontmatter(file_path: Path) -> tuple[str, list[str]]:
             end = i
             break
     if end is None:
-        return "", []
+        return {}
 
-    frontmatter = "\n".join(lines[1:end])
-    summary = ""
-    read_when = []
+    result = {}
+    current_key = None
+    current_list = None
 
-    in_read_when = False
-    for line in frontmatter.split("\n"):
-        if line.startswith("summary:"):
-            summary = line[len("summary:"):].strip().strip('"\'')
-            in_read_when = False
-        elif line.startswith("read_when:"):
-            in_read_when = True
-            # Inline list: read_when: [a, b, c]
-            val = line[len("read_when:"):].strip()
-            if val.startswith("["):
-                val = val.strip("[]")
-                read_when = [v.strip().strip('"\'') for v in val.split(",") if v.strip()]
-                in_read_when = False
-        elif in_read_when and line.startswith("  - "):
-            read_when.append(line[4:].strip().strip('"\''))
-        elif in_read_when and not line.startswith(" ") and line.strip():
-            in_read_when = False
+    for line in lines[1:end]:
+        # List item continuation
+        if current_list is not None and line.startswith("  - "):
+            current_list.append(line[4:].strip().strip('"\''))
+            continue
 
-    return summary, read_when
+        # New top-level key
+        if ":" in line and not line.startswith(" "):
+            current_list = None
+            key, _, val = line.partition(":")
+            key = key.strip()
+            val = val.strip()
+
+            if val.startswith("[") and val.endswith("]"):
+                # Inline list: key: [a, b, c]
+                inner = val[1:-1]
+                result[key] = [v.strip().strip('"\'') for v in inner.split(",") if v.strip()]
+            elif val == "":
+                # Start of a list
+                current_key = key
+                current_list = []
+                result[key] = current_list
+            else:
+                result[key] = val.strip('"\'')
+                current_key = key
+
+    return result
 
 
-def load_registry(project_dir: Path) -> list[dict]:
-    """Load registry from .reflex/registry.yaml."""
-    registry_path = project_dir / ".reflex" / "registry.yaml"
-    if not registry_path.exists():
-        return []
-
-    try:
-        import yaml  # type: ignore
-        with open(registry_path) as f:
-            data = yaml.safe_load(f)
-    except Exception:
-        # Fall back to manual parsing if yaml not available
-        return []
-
-    if not isinstance(data, dict):
+def discover_skills(project_dir: Path) -> list[dict]:
+    """
+    Discover skills from .claude/skills/*/SKILL.md.
+    Frontmatter must have `name` and `description`.
+    Optional `use_when` list for routing hints (falls back to description).
+    """
+    skills_dir = project_dir / ".claude" / "skills"
+    if not skills_dir.exists():
         return []
 
     items = []
-
-    # Explicit docs
-    for doc in data.get("docs", []) or []:
-        if isinstance(doc, dict) and doc.get("path"):
-            items.append({
-                "type": "doc",
-                "path": doc["path"],
-                "summary": doc.get("summary", ""),
-                "read_when": doc.get("read_when", []),
-            })
-
-    # Explicit skills
-    for skill in data.get("skills", []) or []:
-        if isinstance(skill, dict) and skill.get("name"):
-            items.append({
-                "type": "skill",
-                "name": skill["name"],
-                "description": skill.get("description", ""),
-                "use_when": skill.get("use_when", []),
-            })
-
-    # Auto-scan directories
-    for scan in data.get("scan", []) or []:
-        if not isinstance(scan, dict):
+    for skill_file in sorted(skills_dir.rglob("SKILL.md")):
+        fm = parse_frontmatter(skill_file)
+        name = fm.get("name", "")
+        description = fm.get("description", "")
+        if not name or not description:
             continue
-        scan_path = project_dir / scan.get("path", "")
-        scan_type = scan.get("type", "doc")
-        if not scan_path.exists():
+        use_when = fm.get("use_when", [])
+        if isinstance(use_when, str):
+            use_when = [use_when]
+        items.append({
+            "type": "skill",
+            "name": name,
+            "description": description,
+            "use_when": use_when,
+        })
+
+    return items
+
+
+def discover_docs(project_dir: Path) -> list[dict]:
+    """
+    Discover docs by globbing all *.md files in the project.
+    Only includes files with both `summary` and `read_when` frontmatter.
+    Skips noise directories and .claude/skills/ (those are skills, not docs).
+    """
+    skills_dir = project_dir / ".claude" / "skills"
+    items = []
+
+    def should_skip(path: Path) -> bool:
+        for part in path.relative_to(project_dir).parts:
+            if part in SKIP_DIRS:
+                return True
+        # Don't list skill files as docs
+        try:
+            path.relative_to(skills_dir)
+            return True
+        except ValueError:
+            pass
+        return False
+
+    for md_file in sorted(project_dir.rglob("*.md")):
+        if should_skip(md_file):
             continue
-        for md_file in sorted(scan_path.rglob("*.md")):
-            if md_file.name in ("INDEX.md", "README.md"):
-                continue
-            summary, read_when = extract_frontmatter(md_file)
-            if not summary:
-                continue
-            rel = str(md_file.relative_to(project_dir))
-            if scan_type == "skill":
-                items.append({
-                    "type": "skill",
-                    "name": md_file.stem,
-                    "description": summary,
-                    "use_when": read_when,
-                })
-            else:
-                items.append({
-                    "type": "doc",
-                    "path": rel,
-                    "summary": summary,
-                    "read_when": read_when,
-                })
+
+        fm = parse_frontmatter(md_file)
+        summary = fm.get("summary", "")
+        read_when = fm.get("read_when", [])
+
+        if not summary or not read_when:
+            continue
+
+        if isinstance(read_when, str):
+            read_when = [read_when]
+
+        items.append({
+            "type": "doc",
+            "path": str(md_file.relative_to(project_dir)),
+            "summary": summary,
+            "read_when": read_when,
+        })
 
     return items
 
@@ -208,14 +225,9 @@ def save_session_state(state_dir: Path, session_id: str, state: dict):
 
 
 def call_reflex(payload: dict) -> dict:
-    """Call `reflex route` with the given payload. Returns {"docs": [], "skills": []}."""
+    """Call `reflex route` with the given payload."""
     empty = {"docs": [], "skills": []}
-
-    # Find reflex binary
-    reflex_bin = "reflex"
-    custom_bin = os.environ.get("REFLEX_BIN")
-    if custom_bin:
-        reflex_bin = custom_bin
+    reflex_bin = os.environ.get("REFLEX_BIN", "reflex")
 
     try:
         result = subprocess.run(
@@ -254,18 +266,18 @@ def main():
     project_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", "."))
     state_dir = project_dir / ".reflex" / ".state"
 
-    # Extract recent conversation
-    messages = extract_transcript(transcript_path, LOOKBACK) if transcript_path else []
-
-    # Load registry
-    registry = load_registry(project_dir)
+    # Auto-discover registry — no config file needed
+    registry = discover_skills(project_dir) + discover_docs(project_dir)
     if not registry:
         sys.exit(0)
+
+    # Extract recent conversation
+    messages = extract_transcript(transcript_path, LOOKBACK) if transcript_path else []
 
     # Load session state
     session = load_session_state(state_dir, session_id)
 
-    # Build payload and call reflex
+    # Call reflex
     payload = {
         "messages": messages,
         "registry": registry,
@@ -285,18 +297,17 @@ def main():
     session["skills_used"] = list(set(session.get("skills_used", []) + skills))
     save_session_state(state_dir, session_id, session)
 
-    # Format additionalContext
+    # Inject context
     parts = []
     if docs:
         parts.append(f"[Reflex] Read before responding: {', '.join(docs)}")
     if skills:
         parts.append(f"[Reflex] Use skill: {', '.join('/' + s for s in skills)}")
-    context = "\n".join(parts)
 
     output = {
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
-            "additionalContext": context,
+            "additionalContext": "\n".join(parts),
         }
     }
     print(json.dumps(output))

@@ -34,32 +34,38 @@ go install github.com/markmdev/reflex@latest
 # Or download a binary from releases
 ```
 
-**2. Create a registry** (`.reflex/registry.yaml` in your project):
-
-```yaml
-docs:
-  - path: .meridian/docs/auth-flow.md
-    summary: "OAuth implementation details"
-    read_when: [authentication, OAuth, login]
-
-skills:
-  - name: planning
-    description: "Use when implementing new features"
-    use_when: [new feature, architecture, refactor]
-
-# Auto-scan for docs with frontmatter
-scan:
-  - path: .meridian/docs
-    type: doc
-```
-
-**3. Set your API key**:
+**2. Set your API key**:
 
 ```bash
 export MOONSHOT_API_KEY=your-key
 ```
 
-**4. Wire up the hook** for your agent framework — see `hooks/` directory.
+**3. Wire up the hook** for your agent framework — see `hooks/` directory.
+
+That's it. No registry to maintain — Reflex discovers everything automatically.
+
+## Auto-Discovery
+
+**Skills** — add `name` and `description` frontmatter to `.claude/skills/*/SKILL.md`:
+```yaml
+---
+name: planning
+description: "Create implementation plans. Use for new features, refactoring, architecture."
+---
+```
+
+**Docs** — add `summary` and `read_when` frontmatter to any `.md` file:
+```yaml
+---
+summary: "OAuth implementation details and gotchas"
+read_when:
+  - authentication
+  - OAuth
+  - login
+---
+```
+
+Reflex discovers both automatically. No list to maintain.
 
 ## Framework Integrations
 

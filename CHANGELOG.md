@@ -7,5 +7,4 @@
 - **Provider-agnostic architecture**: Any OpenAI-compatible API works via `.reflex/config.yaml`. Default: Kimi K2.5 (`kimi-k2.5-preview` at `api.moonshot.ai`).
 - **Session state filtering**: Items already read/used this session are excluded from routing decisions — no duplicate injections.
 - **Fast path**: If registry is empty after filtering, returns immediately without an API call.
-- **Claude Code hook** (`hooks/claude-code/reflex-hook.py`): `UserPromptSubmit` hook that extracts the last 10 transcript entries, builds a registry from `.reflex/registry.yaml` (explicit entries + directory scanning with frontmatter), calls `reflex route`, and injects `additionalContext` with relevant docs and skills.
-- **Registry auto-scan**: `scan:` entries in `registry.yaml` auto-discover docs with YAML frontmatter (`summary`, `read_when`).
+- **Claude Code hook** (`hooks/claude-code/reflex-hook.py`): `UserPromptSubmit` hook that auto-discovers skills from `.claude/skills/*/SKILL.md` and docs from any `*.md` file with `summary` + `read_when` frontmatter. No registry file to maintain. Calls `reflex route` and injects `additionalContext` with relevant docs and skills.
