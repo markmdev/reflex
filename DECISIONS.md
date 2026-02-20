@@ -1,3 +1,12 @@
+---
+summary: "Vision, architectural decisions, and design rationale for Reflex"
+read_when:
+  - architecture
+  - design decisions
+  - why reflex works this way
+  - contributing
+---
+
 # Reflex — Decisions & Vision
 
 ## Vision
