@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""
+Reflex session cleanup hook.
+
+Clears .reflex/.state/ on session start (startup, clear) and session end,
+so each new session starts with a fresh injection history.
+
+Does NOT clean on compact — injected state should survive compaction so
+docs/skills aren't re-injected mid-session.
+"""
+
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+CLEAN_SOURCES = {"startup", "clear"}
+
+
+def main():
+    try:
+        input_data = json.load(sys.stdin)
+    except (json.JSONDecodeError, EOFError):
+        sys.exit(0)
+
+    event = input_data.get("hook_event_name", "")
+
+    if event == "SessionStart":
+        # Clean on startup and clear; leave state intact on compact
+        source = input_data.get("source", "")
+        if source not in CLEAN_SOURCES:
+            sys.exit(0)
+    elif event != "SessionEnd":
+        sys.exit(0)
+
+    project_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR", "."))
+    state_dir = project_dir / ".reflex" / ".state"
+
+    if state_dir.exists():
+        shutil.rmtree(state_dir, ignore_errors=True)
+
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
