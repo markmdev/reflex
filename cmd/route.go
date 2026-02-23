@@ -29,6 +29,13 @@ func runRoute(args []string) error {
 	var input internal.RouteInput
 	if err := json.NewDecoder(os.Stdin).Decode(&input); err != nil {
 		fmt.Fprintf(os.Stderr, "[reflex] invalid input: %v\n", err)
+		cwd, _ := os.Getwd()
+		internal.AppendLog(internal.LogEntry{
+			CWD:    cwd,
+			Status: "error",
+			Error:  "invalid stdin: " + err.Error(),
+			Model:  cfg.Provider.Model,
+		})
 		printEmpty()
 		return nil
 	}

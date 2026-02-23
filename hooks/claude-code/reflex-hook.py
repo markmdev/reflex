@@ -55,7 +55,8 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
     try:
         with open(transcript_path) as f:
             lines = f.readlines()
-    except (OSError, IOError):
+    except (OSError, IOError) as e:
+        print(f"[Reflex] warning: could not read transcript {transcript_path}: {e}", file=sys.stderr)
         return []
 
     for line in reversed(lines):
