@@ -41,6 +41,7 @@ type SessionState struct {
 
 // RouteResult is the JSON output from `reflex route`.
 type RouteResult struct {
-	Docs   []string `json:"docs"`
-	Skills []string `json:"skills"`
+	Reasoning string   `json:"reasoning"`
+	Docs      []string `json:"docs"`
+	Skills    []string `json:"skills"`
 }

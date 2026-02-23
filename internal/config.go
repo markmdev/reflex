@@ -8,10 +8,11 @@ import (
 )
 
 type ProviderConfig struct {
-	BaseURL   string `yaml:"base_url"`
-	APIKeyEnv string `yaml:"api_key_env,omitempty"` // read key from this env var (optional)
-	APIKey    string `yaml:"api_key,omitempty"`     // store key directly (set via `reflex config set`)
-	Model     string `yaml:"model"`
+	BaseURL      string `yaml:"base_url"`
+	APIKeyEnv    string `yaml:"api_key_env,omitempty"` // read key from this env var (optional)
+	APIKey       string `yaml:"api_key,omitempty"`     // store key directly (set via `reflex config set`)
+	Model        string `yaml:"model"`
+	ResponsesAPI bool   `yaml:"responses_api,omitempty"` // use OpenAI Responses API instead of Chat Completions
 }
 
 type Config struct {
@@ -117,6 +118,9 @@ func mergeConfig(cfg *Config, path string) {
 	}
 	if overlay.Provider.Model != "" {
 		cfg.Provider.Model = overlay.Provider.Model
+	}
+	if overlay.Provider.ResponsesAPI {
+		cfg.Provider.ResponsesAPI = true
 	}
 }
 

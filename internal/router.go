@@ -8,6 +8,8 @@ import (
 
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
+	"github.com/openai/openai-go/responses"
+	"github.com/openai/openai-go/shared"
 )
 
 // Route decides what docs and skills to inject for the given input.
@@ -38,21 +40,38 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, Registry, string, strin
 		option.WithBaseURL(cfg.Provider.BaseURL),
 	)
 
-	resp, err := client.Chat.Completions.New(context.Background(), openai.ChatCompletionNewParams{
-		Model: openai.ChatModel(cfg.Provider.Model),
-		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.UserMessage(prompt),
-		},
-	})
-	if err != nil {
-		return empty, excluded, prompt, "", fmt.Errorf("LLM error: %w", err)
+	var raw string
+
+	if cfg.Provider.ResponsesAPI {
+		resp, err := client.Responses.New(context.Background(), responses.ResponseNewParams{
+			Model: shared.ResponsesModel(cfg.Provider.Model),
+			Input: responses.ResponseNewParamsInputUnion{
+				OfString: openai.String(prompt),
+			},
+			Reasoning: shared.ReasoningParam{
+				Effort: shared.ReasoningEffortMedium,
+			},
+		})
+		if err != nil {
+			return empty, excluded, prompt, "", fmt.Errorf("LLM error: %w", err)
+		}
+		raw = strings.TrimSpace(resp.OutputText())
+	} else {
+		resp, err := client.Chat.Completions.New(context.Background(), openai.ChatCompletionNewParams{
+			Model: openai.ChatModel(cfg.Provider.Model),
+			Messages: []openai.ChatCompletionMessageParamUnion{
+				openai.UserMessage(prompt),
+			},
+		})
+		if err != nil {
+			return empty, excluded, prompt, "", fmt.Errorf("LLM error: %w", err)
+		}
+		if len(resp.Choices) == 0 {
+			return empty, excluded, prompt, "", fmt.Errorf("LLM returned no choices")
+		}
+		raw = strings.TrimSpace(resp.Choices[0].Message.Content)
 	}
 
-	if len(resp.Choices) == 0 {
-		return empty, excluded, prompt, "", fmt.Errorf("LLM returned no choices")
-	}
-
-	raw := strings.TrimSpace(resp.Choices[0].Message.Content)
 	if raw == "" {
 		return empty, excluded, prompt, "", fmt.Errorf("LLM returned empty response")
 	}
