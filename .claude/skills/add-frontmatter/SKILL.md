@@ -21,8 +21,9 @@ read_when:
 ## What to skip
 
 - Files already having correct `summary` + `read_when` frontmatter — leave them alone
+- Files that have frontmatter with any other keys (e.g. `name`, `description`, `title`) — do not replace or merge, leave them alone
 - `node_modules/`, `.git/`, `dist/`, `build/`, `vendor/`, `__pycache__/`
-- `.claude/skills/` — skill files use different frontmatter (`name`, `description`) and must not be touched
+- `.claude/` — agents, skills, commands, hooks all use their own frontmatter schemas
 - Files that are purely generated output, changelogs, or boilerplate with no reusable knowledge (e.g. `CHANGELOG.md`, `LICENSE`)
 
 ## Process
