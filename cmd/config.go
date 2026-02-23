@@ -30,7 +30,7 @@ func runConfig(args []string) error {
 func configShow() error {
 	cfg, err := internal.LoadConfig("")
 	if err != nil {
-		cfg = internal.DefaultConfig()
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 	p := cfg.Provider
 

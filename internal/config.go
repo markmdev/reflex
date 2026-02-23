@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -101,10 +102,11 @@ func SaveGlobalConfig(cfg *Config) error {
 func mergeConfig(cfg *Config, path string) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return
+		return // file not found or unreadable — skip silently
 	}
 	var overlay Config
 	if err := yaml.Unmarshal(data, &overlay); err != nil {
+		fmt.Fprintf(os.Stderr, "[reflex] warning: malformed config %s: %v\n", path, err)
 		return
 	}
 	if overlay.Provider.BaseURL != "" {

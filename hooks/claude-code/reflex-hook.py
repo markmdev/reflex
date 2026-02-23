@@ -238,8 +238,8 @@ def save_session_state(state_dir: Path, session_id: str, state: dict):
     state_file = state_dir / f"{session_id}.json"
     try:
         state_file.write_text(json.dumps(state))
-    except OSError:
-        pass
+    except OSError as e:
+        print(f"[Reflex] warning: could not save session state: {e}", file=sys.stderr)
 
 
 def find_reflex_bin() -> str:
