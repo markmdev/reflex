@@ -48,7 +48,8 @@ func Route(input RouteInput, cfg *Config) (*RouteResult, Registry, string, strin
 
 	var raw string
 
-	if cfg.Provider.ResponsesAPI {
+	useResponsesAPI := cfg.Provider.ResponsesAPI || strings.Contains(cfg.Provider.BaseURL, "api.openai.com")
+	if useResponsesAPI {
 		resp, err := client.Responses.New(context.Background(), responses.ResponseNewParams{
 			Model: shared.ResponsesModel(cfg.Provider.Model),
 			Input: responses.ResponseNewParamsInputUnion{
