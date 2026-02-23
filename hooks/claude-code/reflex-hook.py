@@ -18,6 +18,9 @@ from pathlib import Path
 # How many recent transcript entries to pass to the router
 LOOKBACK = 10
 
+# Max directory depth to scan for docs (relative to project root)
+MAX_DOC_DEPTH = 3
+
 # Directories to skip when globbing for docs
 SKIP_DIRS = {
     ".git", "node_modules", ".next", "dist", "build", "__pycache__",
@@ -197,6 +200,8 @@ def discover_docs(project_dir: Path) -> list[dict]:
 
     for md_file in sorted(project_dir.rglob("*.md")):
         if should_skip(md_file):
+            continue
+        if len(md_file.relative_to(project_dir).parts) - 1 > MAX_DOC_DEPTH:
             continue
 
         fm = parse_frontmatter(md_file)
