@@ -35,10 +35,10 @@ Rules:
 - Return ONLY valid JSON, no explanation, no markdown fences
 
 Return exactly:
-{"docs": ["path/to/doc.md"], "skills": ["skill-name"]}
+{"reasoning": "one sentence explaining your decision", "docs": ["path/to/doc.md"], "skills": ["skill-name"]}
 
 If nothing is needed:
-{"docs": [], "skills": []}
+{"reasoning": "one sentence explaining why nothing is needed", "docs": [], "skills": []}
 `)
 
 	return sb.String()
