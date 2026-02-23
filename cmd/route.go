@@ -35,22 +35,30 @@ func runRoute(args []string) error {
 
 	// Route
 	start := time.Now()
-	result, excluded, prompt, rawResponse, routeErr := internal.Route(input, cfg)
+	result, excluded, prompt, rawResponse, skipReason, routeErr := internal.Route(input, cfg)
 	latency := time.Since(start).Milliseconds()
 
+	status := "ok"
 	errStr := ""
 	if routeErr != nil {
 		fmt.Fprintf(os.Stderr, "[reflex] routing error: %v\n", routeErr)
 		errStr = routeErr.Error()
+		status = "error"
 		result = &internal.RouteResult{Docs: []string{}, Skills: []string{}}
+	} else if skipReason != "" {
+		status = "skipped"
 	}
 
 	// Log
 	cwd, _ := os.Getwd()
+	session := input.Session
 	internal.AppendLog(internal.LogEntry{
 		CWD:         cwd,
+		Status:      status,
+		SkipReason:  skipReason,
 		Messages:    input.Messages,
 		Registry:    input.Registry,
+		Session:     &session,
 		Excluded:    excluded,
 		Prompt:      prompt,
 		RawResponse: rawResponse,
