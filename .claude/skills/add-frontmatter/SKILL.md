@@ -22,6 +22,7 @@ read_when:
 
 - Files already having correct `summary` + `read_when` frontmatter — leave them alone
 - `node_modules/`, `.git/`, `dist/`, `build/`, `vendor/`, `__pycache__/`
+- `.claude/skills/` — skill files use different frontmatter (`name`, `description`) and must not be touched
 - Files that are purely generated output, changelogs, or boilerplate with no reusable knowledge (e.g. `CHANGELOG.md`, `LICENSE`)
 
 ## Process
