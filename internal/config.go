@@ -23,8 +23,9 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Provider: ProviderConfig{
-			BaseURL: "https://api.moonshot.ai/v1",
-			Model:   "kimi-k2.5",
+			BaseURL:      "https://api.openai.com/v1",
+			Model:        "gpt-5.2",
+			ResponsesAPI: true,
 		},
 	}
 }
@@ -54,10 +55,10 @@ func LoadConfig(configPath string) (*Config, error) {
 
 	// Fill defaults for any fields still empty
 	if cfg.Provider.BaseURL == "" {
-		cfg.Provider.BaseURL = "https://api.moonshot.ai/v1"
+		cfg.Provider.BaseURL = "https://api.openai.com/v1"
 	}
 	if cfg.Provider.Model == "" {
-		cfg.Provider.Model = "kimi-k2.5-preview"
+		cfg.Provider.Model = "gpt-5.2"
 	}
 	return cfg, nil
 }

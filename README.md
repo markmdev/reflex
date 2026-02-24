@@ -2,8 +2,6 @@
 
 **Instant context routing for AI agents.** A cheap model watches your conversation and automatically injects the right docs and skills before your agent responds — so it never forgets to read what it needs.
 
-**Current version:** `0.1.1` | [Changelog](CHANGELOG.md)
-
 ---
 
 ## The Problem
@@ -17,15 +15,15 @@ The problem isn't missing documentation — it's that static injection doesn't a
 On every user message, Reflex:
 1. Reads the last 10 conversation entries
 2. Looks at your registry of available docs and skills
-3. Uses a fast, cheap model (Kimi K2.5 by default) to decide what's relevant
+3. Uses a fast model (gpt-5.2 by default, any OpenAI-compatible endpoint) to decide what's relevant
 4. Injects a directive to read relevant docs and invoke relevant skills
 5. Tracks what's already been injected — no duplicates within a session
 
 Your agent sees the injection as part of the current message — not buried in a system prompt.
 
-## Quick Start
+## Install
 
-**1. Install**
+**1. Install the `reflex` binary**
 
 ```bash
 go install github.com/markmdev/reflex@latest
@@ -34,21 +32,31 @@ go install github.com/markmdev/reflex@latest
 **2. Set your API key**
 
 ```bash
-export MOONSHOT_API_KEY=your-key
+reflex config set api-key sk-your-openai-key
 ```
 
-**3. Wire up the hook** for your agent framework:
+Or use an environment variable:
+```bash
+export OPENAI_API_KEY=sk-your-key
+```
 
-| Framework | Hook location | Docs |
-|-----------|--------------|------|
-| Claude Code | `hooks/claude-code/` | [Setup](hooks/claude-code/README.md) |
-| OpenClaw | `hooks/openclaw/` | [Setup](hooks/openclaw/README.md) |
+**3. Install the Claude Code plugin**
+
+```bash
+claude plugin install reflex
+```
 
 That's it. No registry to maintain — Reflex discovers everything automatically.
 
+### Other frameworks
+
+| Framework | Hook location | Docs |
+|-----------|--------------|------|
+| OpenClaw | `hooks/openclaw/` | [Setup](hooks/openclaw/README.md) |
+
 ## Auto-Discovery
 
-**Skills** — add `name` and `description` frontmatter to `skills/*/SKILL.md`:
+**Skills** — add `name` and `description` frontmatter to `.claude/skills/*/SKILL.md`:
 ```yaml
 ---
 name: planning
@@ -81,7 +89,7 @@ echo '{
     "skills": []
   },
   "session": {"docs_read": [], "skills_used": []}
-}' | MOONSHOT_API_KEY=xxx reflex route
+}' | reflex route
 
 # Output:
 {"docs":["auth.md"],"skills":[]}
@@ -95,22 +103,31 @@ reflex logs
 
 ## Provider Configuration
 
-Any OpenAI-compatible API works. Config lives at `~/.config/reflex/config.yaml`:
+Any OpenAI-compatible API works. Default: OpenAI gpt-5.2 via Responses API.
+
+Config lives at `~/.config/reflex/config.yaml`:
 
 ```yaml
-provider:
-  base_url: https://api.moonshot.ai/v1  # Default: Kimi K2.5
-  api_key_env: MOONSHOT_API_KEY
-  model: kimi-k2.5-preview
-```
-
-Switch providers by changing those three lines:
-```yaml
-# OpenAI
 provider:
   base_url: https://api.openai.com/v1
-  api_key_env: OPENAI_API_KEY
-  model: gpt-4o-mini
+  model: gpt-5.2
+  responses_api: true
+```
+
+Switch providers by changing those lines:
+```yaml
+# Kimi K2.5
+provider:
+  base_url: https://api.moonshot.ai/v1
+  api_key_env: MOONSHOT_API_KEY
+  model: kimi-k2.5
+```
+
+Or use the CLI:
+```bash
+reflex config set model gpt-4o-mini
+reflex config set base-url https://api.openai.com/v1
+reflex config show
 ```
 
 ## CLI Reference

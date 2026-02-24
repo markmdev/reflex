@@ -23,7 +23,6 @@ def main():
     event = input_data.get("hook_event_name", "")
 
     if event == "SessionStart":
-        # Clean on startup and clear; leave state intact on compact
         source = input_data.get("source", "")
         if source not in CLEAN_SOURCES:
             sys.exit(0)

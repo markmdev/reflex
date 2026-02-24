@@ -1,11 +1,12 @@
 {
+  "description": "Reflex context router — injects relevant docs and skills on every user message",
   "hooks": {
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/reflex-hook.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/reflex-hook.py\"",
             "timeout": 20
           }
         ]
@@ -16,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/reflex-session-cleanup.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session-cleanup.py\"",
             "timeout": 5
           }
         ]
@@ -27,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/reflex-session-cleanup.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/session-cleanup.py\"",
             "timeout": 5
           }
         ]

@@ -55,8 +55,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
     try:
         with open(transcript_path) as f:
             lines = f.readlines()
-    except (OSError, IOError) as e:
-        print(f"[Reflex] warning: could not read transcript {transcript_path}: {e}", file=sys.stderr)
+    except (OSError, IOError):
         return []
 
     for line in reversed(lines):
@@ -79,7 +78,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
         if entry_type == "user" and role == "user" and isinstance(content, str) and content.strip():
             if _is_noise(content):
                 continue
-            entries.insert(0, {"type": "user", "text": content.strip()})
+            entries.insert(0, {"type": "user", "text": content.strip()[:2000]})
 
         # User content blocks (non-tool-result)
         elif entry_type == "user" and role == "user" and isinstance(content, list):
@@ -90,7 +89,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
                     text = block["text"].strip()
                     if _is_noise(text):
                         continue
-                    entries.insert(0, {"type": "user", "text": text})
+                    entries.insert(0, {"type": "user", "text": text[:2000]})
 
         # Assistant messages (text only — thinking blocks are internal reasoning, not useful for routing)
         elif entry_type == "assistant" and role == "assistant" and isinstance(content, list):
@@ -102,7 +101,7 @@ def extract_transcript(transcript_path: str, lookback: int) -> list[dict]:
 
 
 def parse_frontmatter(file_path: Path) -> dict:
-    """Parse YAML frontmatter from a markdown file. Returns dict of key→value."""
+    """Parse YAML frontmatter from a markdown file. Returns dict of key->value."""
     try:
         text = file_path.read_text(encoding="utf-8", errors="ignore")
     except (OSError, IOError):
@@ -157,7 +156,6 @@ def discover_skills(project_dir: Path) -> list[dict]:
     """
     Discover skills from .claude/skills/*/SKILL.md.
     Frontmatter must have `name` and `description`.
-    Optional `use_when` list for routing hints (falls back to description).
     """
     skills_dir = project_dir / ".claude" / "skills"
     if not skills_dir.exists():
@@ -239,8 +237,8 @@ def save_session_state(state_dir: Path, session_id: str, state: dict):
     state_file = state_dir / f"{session_id}.json"
     try:
         state_file.write_text(json.dumps(state))
-    except OSError as e:
-        print(f"[Reflex] warning: could not save session state: {e}", file=sys.stderr)
+    except OSError:
+        pass
 
 
 def find_reflex_bin() -> str:
@@ -280,7 +278,7 @@ def call_reflex(payload: dict) -> dict:
             return empty
         return json.loads(result.stdout.strip())
     except FileNotFoundError:
-        print("[Reflex] `reflex` binary not found. Install it or set REFLEX_BIN.", file=sys.stderr)
+        print("[Reflex] `reflex` binary not found. Install: go install github.com/markmdev/reflex@latest", file=sys.stderr)
         return empty
     except subprocess.TimeoutExpired:
         print("[Reflex] route timed out", file=sys.stderr)
