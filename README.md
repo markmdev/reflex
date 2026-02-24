@@ -43,7 +43,8 @@ export OPENAI_API_KEY=sk-your-key
 **3. Install the Claude Code plugin**
 
 ```bash
-claude plugin install reflex
+/plugin marketplace add markmdev/claude-plugins
+/plugin install reflex@markmdev
 ```
 
 That's it. No registry to maintain — Reflex discovers everything automatically.
