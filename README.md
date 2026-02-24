@@ -26,6 +26,11 @@ Your agent sees the injection as part of the current message — not buried in a
 **1. Install the `reflex` binary**
 
 ```bash
+curl -sL https://raw.githubusercontent.com/markmdev/reflex/master/install.sh | sh
+```
+
+Or with Go:
+```bash
 go install github.com/markmdev/reflex@latest
 ```
 
