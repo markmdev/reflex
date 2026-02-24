@@ -38,6 +38,10 @@ curl -sL "$URL" -o "${INSTALL_DIR}/reflex"
 chmod +x "${INSTALL_DIR}/reflex"
 
 echo "Installed reflex ${TAG} to ${INSTALL_DIR}/reflex"
-echo ""
-echo "Make sure ${INSTALL_DIR} is in your PATH:"
-echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+
+case ":$PATH:" in
+  *":${INSTALL_DIR}:"*) ;;
+  *) echo ""
+     echo "Add ${INSTALL_DIR} to your PATH:"
+     echo "  export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
+esac
