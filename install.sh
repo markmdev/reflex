@@ -39,9 +39,10 @@ chmod +x "${INSTALL_DIR}/reflex"
 
 echo "Installed reflex ${TAG} to ${INSTALL_DIR}/reflex"
 
-case ":$PATH:" in
-  *":${INSTALL_DIR}:"*) ;;
-  *) echo ""
-     echo "Add ${INSTALL_DIR} to your PATH:"
-     echo "  export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
-esac
+if command -v reflex >/dev/null 2>&1; then
+  echo "Run 'reflex --help' to get started."
+else
+  echo ""
+  echo "Add ${INSTALL_DIR} to your PATH to use reflex:"
+  echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+fi
