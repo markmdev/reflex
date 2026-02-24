@@ -88,7 +88,7 @@ Add this frontmatter to any doc you want Reflex to route to. No list to update â
 
 ## Provider configuration
 
-Override the default provider with `.reflex/config.yaml` in your project:
+Configure the provider in `~/.config/reflex/config.yaml`:
 
 ```yaml
 provider:

@@ -95,7 +95,7 @@ reflex logs
 
 ## Provider Configuration
 
-Any OpenAI-compatible API works. Create `.reflex/config.yaml` in your project:
+Any OpenAI-compatible API works. Config lives at `~/.config/reflex/config.yaml`:
 
 ```yaml
 provider:

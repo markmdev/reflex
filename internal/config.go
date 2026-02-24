@@ -38,19 +38,16 @@ func GlobalConfigPath() string {
 	return filepath.Join(home, ".config", "reflex", "config.yaml")
 }
 
-// LoadConfig loads config by merging: defaults → global → project.
+// LoadConfig loads config by merging: defaults → global (→ explicit path if provided).
 func LoadConfig(configPath string) (*Config, error) {
 	cfg := DefaultConfig()
 
-	// Layer 1: global config
+	// Global config
 	if p := GlobalConfigPath(); p != "" {
 		mergeConfig(cfg, p)
 	}
 
-	// Layer 2: project config (walk up from cwd, or explicit path)
-	if configPath == "" {
-		configPath = findProjectConfig()
-	}
+	// Explicit path override (e.g. --config flag)
 	if configPath != "" {
 		mergeConfig(cfg, configPath)
 	}
@@ -126,22 +123,3 @@ func mergeConfig(cfg *Config, path string) {
 	}
 }
 
-// findProjectConfig walks up from cwd looking for .reflex/config.yaml.
-func findProjectConfig() string {
-	dir, err := os.Getwd()
-	if err != nil {
-		return ""
-	}
-	for {
-		candidate := filepath.Join(dir, ".reflex", "config.yaml")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return ""
-}

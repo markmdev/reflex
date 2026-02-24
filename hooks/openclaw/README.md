@@ -64,7 +64,7 @@ On every message, the plugin:
 
 ## Provider configuration
 
-Override the default provider with `.reflex/config.yaml` in your project:
+Configure the provider in `~/.config/reflex/config.yaml`:
 
 ```yaml
 provider:
