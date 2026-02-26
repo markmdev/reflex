@@ -42,7 +42,7 @@ func runRoute(args []string) error {
 
 	// Route
 	start := time.Now()
-	result, excluded, prompt, rawResponse, skipReason, routeErr := internal.Route(input, cfg)
+	result, _, _, rawResponse, skipReason, routeErr := internal.Route(input, cfg)
 	latency := time.Since(start).Milliseconds()
 
 	status := "ok"
@@ -60,19 +60,17 @@ func runRoute(args []string) error {
 	cwd, _ := os.Getwd()
 	session := input.Session
 	internal.AppendLog(internal.LogEntry{
-		CWD:         cwd,
-		Status:      status,
-		SkipReason:  skipReason,
-		Messages:    input.Messages,
-		Registry:    input.Registry,
-		Session:     &session,
-		Excluded:    excluded,
-		Prompt:      prompt,
-		RawResponse: rawResponse,
-		Result:      result,
-		LatencyMS:   latency,
-		Model:       cfg.Provider.Model,
-		Error:       errStr,
+		CWD:          cwd,
+		Status:       status,
+		SkipReason:   skipReason,
+		MessageCount: len(input.Messages),
+		Registry:     input.Registry,
+		Session:      &session,
+		RawResponse:  rawResponse,
+		Result:       result,
+		LatencyMS:    latency,
+		Model:        cfg.Provider.Model,
+		Error:        errStr,
 	})
 
 	// Output

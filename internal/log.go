@@ -11,12 +11,10 @@ type LogEntry struct {
 	Timestamp    string        `json:"ts"`
 	CWD          string        `json:"cwd"`
 	Status       string        `json:"status"` // "ok", "skipped", "error"
-	SkipReason   string        `json:"skip_reason,omitempty"` // why skipped (no registry, all already read)
-	Messages     []Message     `json:"messages"`
+	SkipReason   string        `json:"skip_reason,omitempty"`
+	MessageCount int           `json:"message_count"`
 	Registry     Registry      `json:"registry"`
 	Session      *SessionState `json:"session"`
-	Excluded     Registry      `json:"excluded"`
-	Prompt       string        `json:"prompt,omitempty"`
 	RawResponse  string        `json:"raw_response,omitempty"`
 	Result       *RouteResult  `json:"result"`
 	LatencyMS    int64         `json:"latency_ms"`

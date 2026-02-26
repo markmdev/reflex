@@ -34,16 +34,16 @@ func runLogs(args []string) error {
 	}
 	defer f.Close()
 
-	// Collect all lines
 	var lines []string
 	scanner := bufio.NewScanner(f)
+	// Increase scanner buffer for large log lines
+	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
 	for scanner.Scan() {
 		if line := scanner.Text(); line != "" {
 			lines = append(lines, line)
 		}
 	}
 
-	// Take last N
 	if len(lines) > n {
 		lines = lines[len(lines)-n:]
 	}
@@ -53,9 +53,6 @@ func runLogs(args []string) error {
 		return nil
 	}
 
-	fmt.Printf("%-19s  %-20s  %-30s  %-8s  %s\n", "TIME", "PROJECT", "RESULT", "LATENCY", "MSG/REG")
-	fmt.Println(strings.Repeat("─", 88))
-
 	for _, line := range lines {
 		var e internal.LogEntry
 		if err := json.Unmarshal([]byte(line), &e); err != nil {
@@ -63,41 +60,61 @@ func runLogs(args []string) error {
 		}
 
 		ts, _ := time.Parse(time.RFC3339, e.Timestamp)
-		local := ts.Local().Format("2006-01-02 15:04:05")
+		local := ts.Local().Format("15:04:05")
 
 		project := filepath.Base(e.CWD)
-		if len(project) > 20 {
-			project = project[:17] + "..."
+		if len(project) > 18 {
+			project = project[:15] + "..."
 		}
 
-		result := "(nothing)"
+		// Status indicator
+		var status string
+		switch e.Status {
+		case "ok":
+			status = "✓"
+		case "skipped":
+			status = "○"
+		case "error":
+			status = "✗"
+		default:
+			status = "?"
+		}
+
+		// Build result string
+		var result string
 		if e.Error != "" {
-			result = "error: " + truncate(e.Error, 28)
+			result = "error: " + truncate(e.Error, 50)
+		} else if e.SkipReason != "" {
+			result = "skip: " + e.SkipReason
 		} else if e.Result != nil {
 			parts := []string{}
-			if len(e.Result.Docs) > 0 {
-				parts = append(parts, strings.Join(shortPaths(e.Result.Docs), ", "))
+			for _, d := range e.Result.Docs {
+				parts = append(parts, filepath.Base(d))
 			}
-			if len(e.Result.Skills) > 0 {
-				for _, s := range e.Result.Skills {
-					parts = append(parts, "/"+s)
-				}
+			for _, s := range e.Result.Skills {
+				parts = append(parts, "/"+s)
 			}
 			if len(parts) > 0 {
-				result = truncate(strings.Join(parts, " · "), 30)
+				result = strings.Join(parts, ", ")
+			} else {
+				result = "(nothing needed)"
 			}
+			// Add reasoning if present
+			if e.Result.Reasoning != "" {
+				result += "  — " + truncate(e.Result.Reasoning, 60)
+			}
+		} else {
+			result = "(nothing needed)"
 		}
 
-		excluded := len(e.Excluded.Docs) + len(e.Excluded.Skills)
-		excludedStr := ""
-		if excluded > 0 {
-			excludedStr = fmt.Sprintf(" -%d", excluded)
-		}
-		fmt.Printf("%-19s  %-20s  %-30s  %dms  (%dm/%dr%s)\n",
-			local, project, result, e.LatencyMS, len(e.Messages), len(e.Registry.Docs)+len(e.Registry.Skills), excludedStr)
+		// Registry size
+		regSize := len(e.Registry.Docs) + len(e.Registry.Skills)
+
+		fmt.Printf("  %s  %s  %-18s  %4dms  %dm/%dr  %s\n",
+			status, local, project, e.LatencyMS, e.MessageCount, regSize, result)
 	}
 
-	fmt.Printf("\nLog file: %s\n", p)
+	fmt.Printf("\n  %s\n", p)
 	return nil
 }
 
