@@ -1,12 +1,11 @@
 {
   "name": "reflex",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Context router — auto-injects relevant docs and skills before Claude responds",
   "author": {
     "name": "Mark Morgan",
     "url": "https://github.com/markmdev"
   },
   "repository": "https://github.com/markmdev/reflex",
-  "license": "MIT",
-  "hooks": "./hooks/hooks.json"
+  "license": "MIT"
 }
