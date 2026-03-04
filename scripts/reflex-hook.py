@@ -300,8 +300,8 @@ def main():
     transcript_path = input_data.get("transcript_path", "")
     # Use transcript filename stem as session key — guaranteed stable within a session
     session_key = Path(transcript_path).stem if transcript_path else input_data.get("session_id", "default")
-    # cwd from input is more reliable than CLAUDE_PROJECT_DIR env var
-    project_dir = Path(input_data.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR", "."))
+    # CLAUDE_PROJECT_DIR is the project root — stable even when the agent cd's into subdirs
+    project_dir = Path(os.environ.get("CLAUDE_PROJECT_DIR") or input_data.get("cwd") or ".")
     state_dir = Path.home() / ".config" / "reflex" / "state"
 
     # Auto-discover registry — no config file needed
