@@ -27,4 +27,8 @@ Agents forget to read docs and use skills even when everything is documented. Re
 
 **Always exits 0** — hook never blocks the agent. Errors go to stderr only.
 
+**Plugin + separate binary** — the Claude Code plugin contains only hooks and scripts. The Go binary is installed independently (`go install`). This avoids embedding platform-specific binaries in the plugin, keeps the plugin lightweight, and follows the same pattern as LSP plugins (configure the integration, expect the binary on PATH).
+
+**Session state in `~/.config/reflex/state/`** — global location, not project-local. A single Reflex install serves all projects. State files are keyed by session and cleaned up on session start/end.
+
 **Thinking blocks excluded from routing input** — the hook only passes user and assistant text to the router, not the model's thinking blocks. Rationale: routing should be based on user intent, not internal reasoning. Thinking blocks add tokens and noise without improving routing decisions. Open question: thinking blocks might occasionally contain signals (e.g. the model realizes mid-thought it needs a doc it hasn't read). Worth revisiting if routing quality is poor on complex multi-turn conversations.

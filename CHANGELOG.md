@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.5] - 2026-03-04
+
+### Fixed
+- **Doc discovery scans wrong directory** — Reflex was using `cwd` (the agent's current working directory) instead of `CLAUDE_PROJECT_DIR` (the project root). When the agent `cd`s into subdirectories, docs and skills at the project root were invisible. Now uses `CLAUDE_PROJECT_DIR` first, falling back to `cwd`.
+
 ## [0.1.1] - 2026-02-20
 
 ### Added
