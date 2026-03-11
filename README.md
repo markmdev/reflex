@@ -1,91 +1,87 @@
 # Reflex
 
-**Instant context routing for AI agents.** A cheap model watches your conversation and automatically injects the right docs and skills before your agent responds — so it never forgets to read what it needs.
+Reflex is instant context routing for AI agents.
 
----
+It watches the current conversation, decides which docs and skills are relevant, and injects only those. The result is simple: your agent is much more likely to read the right thing before it starts working.
 
-## The Problem
+## Why people use it
 
-You document everything. You have an index with summaries. You have `read_when` hints everywhere. You have reminders in CLAUDE.md. And still, the agent doesn't read the right docs before coding.
+Most teams already have the raw ingredients:
 
-The problem isn't missing documentation — it's that static injection doesn't adapt to what you're actually asking right now.
+- markdown docs
+- `read_when` hints
+- skills
+- project rules
 
-## How It Works
+The real problem is not missing documentation. The problem is that the agent does not reliably reach for the right context at the right moment.
 
-On every user message, Reflex:
-1. Reads the last 10 conversation entries
-2. Looks at your registry of available docs and skills
-3. Uses a fast model (gpt-5.2 by default, any OpenAI-compatible endpoint) to decide what's relevant
-4. Injects a directive to read relevant docs and invoke relevant skills
-5. Tracks what's already been injected — no duplicates within a session
+Reflex fixes that by turning your docs and skills into a live routing layer instead of a static pile of files.
 
-Your agent sees the injection as part of the current message — not buried in a system prompt.
+## What Reflex does
+
+On each user message, Reflex can:
+
+- look at recent conversation context
+- inspect the available docs and skills in your project
+- use a cheap routing model to decide what matters now
+- return a minimal list of docs to read and skills to use
+- avoid re-injecting the same items again and again in one session
+
+It is a small routing engine, not a full agent framework.
+
+## Best fit
+
+Reflex is most useful when:
+
+- you already maintain docs or skills
+- your agent often forgets to read them
+- you want dynamic context injection instead of static always-on prompts
+- you want to keep the system simple and framework-agnostic
 
 ## Install
 
-**1. Install the `reflex` binary**
+### Option 1: install the binary
 
 ```bash
 curl -sL https://raw.githubusercontent.com/markmdev/reflex/master/install.sh | sh
 ```
 
-Or with Go:
+### Option 2: install with Go
+
 ```bash
 go install github.com/markmdev/reflex@latest
 ```
 
-**2. Set your API key**
+## Configure the model provider
+
+Set an API key:
 
 ```bash
 reflex config set api-key sk-your-openai-key
 ```
 
-Or use an environment variable:
-```bash
-export OPENAI_API_KEY=sk-your-key
-```
+Or use an environment variable in your own config setup.
 
-**3. Install the Claude Code plugin**
+Show current config:
 
 ```bash
-/plugin marketplace add markmdev/claude-plugins
-/plugin install reflex@markmdev
+reflex config show
 ```
 
-That's it. No registry to maintain — Reflex discovers everything automatically.
+Default config lives at `~/.config/reflex/config.yaml` and uses OpenAI-compatible APIs.
 
-### Other frameworks
+Example:
 
-| Framework | Hook location | Docs |
-|-----------|--------------|------|
-| OpenClaw | `hooks/openclaw/` | [Setup](hooks/openclaw/README.md) |
-
-## Auto-Discovery
-
-**Skills** — add `name` and `description` frontmatter to `.claude/skills/*/SKILL.md`:
 ```yaml
----
-name: planning
-description: "Create implementation plans. Use for new features, refactoring, architecture."
----
+provider:
+  base_url: https://api.openai.com/v1
+  model: gpt-5.2
+  responses_api: true
 ```
 
-**Docs** — add `summary` and `read_when` frontmatter to any `.md` file:
-```yaml
----
-summary: "OAuth implementation details and gotchas"
-read_when:
-  - authentication
-  - OAuth
-  - login
----
-```
+## Quick start
 
-Reflex discovers both automatically. No list to maintain.
-
-## CLI
-
-Reflex is a framework-agnostic CLI. Hooks call it; you can also call it directly.
+Reflex is a CLI first. Hooks and plugins call it, but you can test it directly.
 
 ```bash
 echo '{
@@ -96,64 +92,79 @@ echo '{
   },
   "session": {"docs_read": [], "skills_used": []}
 }' | reflex route
+```
 
-# Output:
+Example output:
+
+```json
 {"docs":["auth.md"],"skills":[]}
 ```
 
-View recent routing decisions:
+If nothing is relevant, Reflex returns empty arrays and gets out of the way.
+
+## Project conventions Reflex understands
+
+### Skills
+
+Reflex discovers skills from `SKILL.md` frontmatter.
+
+Example:
+
+```yaml
+---
+name: planning
+description: "Create implementation plans. Use for new features, refactoring, architecture."
+---
+```
+
+### Docs
+
+Reflex discovers docs from markdown frontmatter.
+
+Example:
+
+```yaml
+---
+summary: "OAuth implementation details and gotchas"
+last_updated: "2026-03-06 19:55 PST"
+read_when:
+  - authentication
+  - OAuth
+  - login
+---
+```
+
+That means you do not need a hand-maintained registry file. Reflex can build the routing view from the project itself.
+
+## Framework integrations
+
+Reflex ships as a framework-agnostic CLI and can also be wired into agent platforms.
+
+Current repo integration:
+
+- OpenClaw plugin: [hooks/openclaw/README.md](hooks/openclaw/README.md)
+
+## Useful commands
+
+- `reflex route` — read stdin JSON and return `{ docs, skills }`
+- `reflex logs` — inspect recent routing decisions
+- `reflex config show` — print active config
+- `reflex config set <key> <value>` — update config values
+- `reflex config reset` — reset global config
+
+Show recent routing activity:
 
 ```bash
 reflex logs
 ```
 
-## Provider Configuration
+## Why it feels different
 
-Any OpenAI-compatible API works. Default: OpenAI gpt-5.2 via Responses API.
+Reflex does one narrow thing well:
 
-Config lives at `~/.config/reflex/config.yaml`:
+- it routes context based on the live conversation
+- it does not require a manually curated registry
+- it keeps injection minimal
+- it stays cheap enough to run on every message
 
-```yaml
-provider:
-  base_url: https://api.openai.com/v1
-  model: gpt-5.2
-  responses_api: true
-```
-
-Switch providers by changing those lines:
-```yaml
-# Kimi K2.5
-provider:
-  base_url: https://api.moonshot.ai/v1
-  api_key_env: MOONSHOT_API_KEY
-  model: kimi-k2.5
-```
-
-Or use the CLI:
-```bash
-reflex config set model gpt-4o-mini
-reflex config set base-url https://api.openai.com/v1
-reflex config show
-```
-
-## CLI Reference
-
-**Input** (stdin JSON):
-```json
-{
-  "messages": [{"type": "user", "text": "..."}],
-  "registry": {
-    "docs": [{"path": "file.md", "summary": "...", "read_when": ["keyword"]}],
-    "skills": [{"name": "planning", "description": "..."}]
-  },
-  "session": {"docs_read": ["already-read.md"], "skills_used": []},
-  "metadata": {}
-}
-```
-
-**Output** (stdout JSON):
-```json
-{"docs": ["file.md"], "skills": []}
-```
-
-Returns `{"docs": [], "skills": []}` when nothing is needed. Errors go to stderr. Always exits 0 — never blocks your agent.
+If you like docs-first agent setups but hate static prompt bloat, Reflex is the missing layer.
